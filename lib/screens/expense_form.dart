@@ -23,11 +23,13 @@ class _ExpenseFormState extends State<ExpenseForm> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isLoadingCategories = true;
+  bool _isLoadingCargos = true;
   String? _error;
 
   // Form field values
   String _description = '';
   int? _expenseTypeId;
+  int? _cargoId;
   double _amount = 0.0;
   DateTime? _expenseDate;
   String? _receiptImagePath;
@@ -35,14 +37,17 @@ class _ExpenseFormState extends State<ExpenseForm> {
   // Controllers
   final _amountController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  final NumberFormat _numberFormat = NumberFormat.decimalPattern();
   
   // Reference data for expense categories
   List<Map<String, dynamic>> _expenseCategories = [];
+  List<Map<String, dynamic>> _cargos = [];
 
   @override
   void initState() {
     super.initState();
     _fetchExpenseCategories();
+    _fetchCargos();
   }
   
   Future<void> _fetchExpenseCategories() async {
@@ -74,6 +79,42 @@ class _ExpenseFormState extends State<ExpenseForm> {
       setState(() {
         _error = 'خطا در دریافت دسته‌بندی‌ها: $e';
         _isLoadingCategories = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCargos() async {
+    setState(() {
+      _isLoadingCargos = true;
+      _error = null;
+    });
+
+    try {
+      final response = await http.get(Uri.parse('http://192.168.197.166/khatooonbar/cargos.php'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> cargosData = json.decode(response.body);
+
+        setState(() {
+          _cargos = cargosData.map((data) => {
+            'id': data['id'] is String ? int.parse(data['id']) : data['id'],
+            'title': data['title'].toString(),
+            'origin': data['origin'].toString(),
+            'destination': data['destination'].toString(),
+            'date': data['date'].toString(),
+          }).toList();
+          _isLoadingCargos = false;
+        });
+      } else {
+        setState(() {
+          _error = 'خطا در دریافت بارنامه‌ها: ${response.statusCode}';
+          _isLoadingCargos = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'خطا در دریافت بارنامه‌ها: $e';
+        _isLoadingCargos = false;
       });
     }
   }
@@ -138,6 +179,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
         'amount': _amount,
         'expense_date': _expenseDate != null ? DateFormat('yyyy-MM-dd').format(_expenseDate!) : null,
         'receipt_image': uploadedImageUrl,
+        'cargo_id': _cargoId,
       };
       
       final response = await http.post(
@@ -172,7 +214,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
         appBar: AppBar(
           title: const Text('افزودن هزینه جدید'),
         ),
-        body: _isLoadingCategories
+        body: _isLoadingCategories || _isLoadingCargos
             ? const Center(child: CircularProgressIndicator())
             : _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -237,7 +279,32 @@ class _ExpenseFormState extends State<ExpenseForm> {
                               },
                             ),
                             const SizedBox(height: 16),
-
+                            DropdownButtonFormField<int>(
+                              value: _cargoId,
+                              decoration: const InputDecoration(
+                                labelText: 'انتخاب بارنامه',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: _cargos.map((cargo) {
+                                final displayText = '${cargo['origin']} → ${cargo['destination']}';
+                                return DropdownMenuItem<int>(
+                                  value: cargo['id'] as int,
+                                  child: Text(displayText),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _cargoId = value;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return 'لطفاً بارنامه را انتخاب کنید';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
                             // Amount
                             TextFormField(
                               controller: _amountController,
@@ -256,9 +323,20 @@ class _ExpenseFormState extends State<ExpenseForm> {
                                 }
                                 return null;
                               },
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  final rawValue = value.replaceAll(',', '');
+                                  final parsedValue = int.tryParse(rawValue);
+                                  if (parsedValue != null) {
+                                    _amountController.value = TextEditingValue(
+                                      text: _numberFormat.format(parsedValue),
+                                      selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                    );
+                                  }
+                                }
+                              },
                               onSaved: (value) {
                                 if (value != null && value.isNotEmpty) {
-                                  // Remove commas and convert to double
                                   _amount = double.parse(value.replaceAll(',', ''));
                                 }
                               },
@@ -356,6 +434,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
                               ],
                             ),
                             const SizedBox(height: 32),
+
+                            // Cargo Dropdown
+                            
+                          
 
                             // Submit Button
                             SizedBox(

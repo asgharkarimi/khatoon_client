@@ -21,7 +21,16 @@ class AppButtons {
       ),
     );
   }
-
+   static Widget deleteButton({
+     required VoidCallback onPressed,
+     required String label,
+   }) {
+     return TextButton.icon(
+       onPressed: onPressed,
+       icon: const Icon(Icons.delete, color: Colors.red),
+       label: Text(label, style: const TextStyle(color: Colors.red)),
+     );
+   }
   /// Styled primary button
   static Widget primaryButton({
     required VoidCallback onPressed,

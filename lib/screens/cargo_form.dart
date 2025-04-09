@@ -75,6 +75,8 @@ class _CargoFormState extends State<CargoForm> {
   // Display variables
   bool _showDriverIncomeSection = false;
 
+  final NumberFormat _numberFormat = NumberFormat.decimalPattern();
+
   @override
   void initState() {
     super.initState();
@@ -216,6 +218,8 @@ class _CargoFormState extends State<CargoForm> {
       print(json.encode(cargoData));
       print("==============================\n");
       
+      print("Request data: ${json.encode(cargoData)}");
+      
       final response = await http.post(
         Uri.parse(AppLinks.cargos),
         headers: {'Content-Type': 'application/json'},
@@ -236,6 +240,8 @@ class _CargoFormState extends State<CargoForm> {
           _isLoading = false;
         });
       }
+      
+      print("API response: ${response.body}");
     } catch (e) {
       setState(() {
         _error = 'خطا: $e';
@@ -804,31 +810,34 @@ class _CargoFormState extends State<CargoForm> {
                               labelText: 'وزن (کیلوگرم)',
                               hintText: 'مثال: 15,000',
                               border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.scale),
                               helperText: _weightController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_weightController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_weightController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
                             keyboardType: TextInputType.number,
-                            textDirection: ui.TextDirection.ltr,
-                            textAlign: TextAlign.left,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'لطفاً وزن بار را وارد کنید';
-                              }
-                              final weight = int.tryParse(value);
-                              if (weight == null || weight <= 0) {
-                                return 'وزن باید عدد مثبت باشد';
+                              if (value == null || value.isEmpty) {
+                                return 'لطفاً وزن را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _weightController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                // Convert from kg to tonnes
-                                final weightKg = double.parse(value);
-                                _weightTonnes = weightKg / 1000.0;
+                                _weightTonnes = double.parse(value.replaceAll(',', '')) / 1000.0;
                               }
                             },
                           ),
@@ -837,30 +846,38 @@ class _CargoFormState extends State<CargoForm> {
                           // Price per tonne field
                           TextFormField(
                             controller: _priceController,
-                            textAlign: TextAlign.left,
                             decoration: InputDecoration(
                               labelText: 'قیمت هر تن (تومان)',
-                              border: const OutlineInputBorder(),
                               hintText: 'مثال: 1,000,000',
+                              border: const OutlineInputBorder(),
                               helperText: _priceController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_priceController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_priceController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'لطفاً قیمت هر تن را وارد کنید';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'لطفاً یک عدد معتبر وارد کنید';
+                                return 'لطفاً قیمت را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _priceController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                _pricePerTonne = double.parse(value) * 10; // Convert to Rials for storage
+                                _pricePerTonne = double.parse(value.replaceAll(',', '')) * 10; // Convert to Rials
                               }
                             },
                           ),
@@ -869,30 +886,38 @@ class _CargoFormState extends State<CargoForm> {
                           // Transport cost per tonne field
                           TextFormField(
                             controller: _transportCostController,
-                            textAlign: TextAlign.left,
                             decoration: InputDecoration(
                               labelText: 'هزینه حمل هر تن (تومان)',
-                              border: const OutlineInputBorder(),
                               hintText: 'مثال: 200,000',
+                              border: const OutlineInputBorder(),
                               helperText: _transportCostController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_transportCostController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_transportCostController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'لطفاً هزینه حمل هر تن را وارد کنید';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'لطفاً یک عدد معتبر وارد کنید';
+                                return 'لطفاً هزینه حمل را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _transportCostController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                _transportCostPerTonne = double.parse(value) * 10; // Convert to Rials for storage
+                                _transportCostPerTonne = double.parse(value.replaceAll(',', '')) * 10; // Convert to Rials
                               }
                             },
                           ),

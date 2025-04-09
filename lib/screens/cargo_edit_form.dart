@@ -16,6 +16,7 @@ import '../models/cargo_type.dart';
 import '../models/customer.dart';
 import '../models/cargo_selling_company.dart';
 import 'package:flutter/rendering.dart' as ui;
+import '../widgets/app_buttons.dart';
 
 class CargoEditForm extends StatefulWidget {
   final Cargo cargo;
@@ -32,28 +33,28 @@ class _CargoEditFormState extends State<CargoEditForm> {
   bool _isLoadingReferences = true;
   String? _error;
 
-  // Form field values
-  late int? _vehicleId;
-  late int? _driverId;
-  late int? _cargoTypeId;
-  late int? _customerId;
-  late int? _shippingCompanyId;
-  late int? _sellingCompanyId;
-  late String _origin;
-  late String _destination;
-  late DateTime? _loadingDate;
-  late DateTime? _unloadingDate;
-  late double _weightTonnes = 0;
-  late double _pricePerTonne = 0;
-  late double _transportCostPerTonne = 0;
-  late int? _customerPaymentStatusId;
-  late bool _sellerPaymentStatus;
-  late double? _waybillAmount;
-  late String? _waybillImage;
-  late Driver? _selectedDriver;
-  late int? _customerBankAccountId;
+  // Form field values (remove 'late' and initialize with default values or null)
+  int? _vehicleId;
+  int? _driverId;
+  int? _cargoTypeId;
+  int? _customerId;
+  int? _shippingCompanyId;
+  int? _sellingCompanyId;
+  String _origin = '';
+  String _destination = '';
+  DateTime? _loadingDate;
+  DateTime? _unloadingDate;
+  double _weightTonnes = 0.0;
+  double _pricePerTonne = 0.0;
+  double _transportCostPerTonne = 0.0;
+  int? _customerPaymentStatusId;
+  bool _sellerPaymentStatus = false;
+  double? _waybillAmount;
+  String? _waybillImage;
+  Driver? _selectedDriver;
+  int? _customerBankAccountId;
 
-  // Controllers for numeric fields
+  // Controllers
   final _weightController = TextEditingController();
   final _priceController = TextEditingController();
   final _transportCostController = TextEditingController();
@@ -76,9 +77,12 @@ class _CargoEditFormState extends State<CargoEditForm> {
   // Add this variable to track whether to show driver income section
   bool _showDriverIncomeSection = false;
 
+  final NumberFormat _numberFormat = NumberFormat.decimalPattern();
+
   @override
   void initState() {
     super.initState();
+    _initializeFormValues(); // Initialize all fields here
     _fetchReferenceData();
     
     // Add listeners to update calculations when values change
@@ -88,11 +92,7 @@ class _CargoEditFormState extends State<CargoEditForm> {
   }
 
   void _initializeFormValues() {
-    // Add debug prints to check values from server
-    print("EDIT FORM - Original weight from server: ${widget.cargo.weightTonnes}");
-    print("EDIT FORM - Original price from server: ${widget.cargo.pricePerTonne}");
-    print("EDIT FORM - Original transport cost from server: ${widget.cargo.transportCostPerTonne}");
-    
+    // Initialize all fields from the widget.cargo data
     _vehicleId = widget.cargo.vehicleId;
     _driverId = widget.cargo.driverId;
     _cargoTypeId = widget.cargo.cargoTypeId;
@@ -113,14 +113,10 @@ class _CargoEditFormState extends State<CargoEditForm> {
     _customerBankAccountId = widget.cargo.customerBankAccountId;
     _selectedDriver = _drivers.firstWhere((d) => d.id == _driverId, orElse: () => Driver(id: 0, firstName: '', lastName: '', phoneNumber: '', salaryPercentage: 0));
     
-    // Initialize controllers with raw values
-    // Convert tonnes back to kg for display
-    _weightController.text = (_weightTonnes * 1000).toInt().toString();
-    
-    // Convert from rials to tomans for display
+    // Initialize controllers
+    _weightController.text = (_weightTonnes * 1000).toString();
     _priceController.text = (_pricePerTonne / 10).toString();
     _transportCostController.text = (_transportCostPerTonne / 10).toString();
-    
     if (_waybillAmount != null) {
       _waybillAmountController.text = (_waybillAmount! / 10).toString();
     }
@@ -597,29 +593,33 @@ class _CargoEditFormState extends State<CargoEditForm> {
                               hintText: 'مثال: 15,000',
                               border: const OutlineInputBorder(),
                               helperText: _weightController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_weightController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_weightController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
                             keyboardType: TextInputType.number,
-                            textDirection: ui.TextDirection.ltr,
-                            textAlign: TextAlign.left,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'لطفاً وزن بار را وارد کنید';
-                              }
-                              final weight = int.tryParse(value);
-                              if (weight == null || weight <= 0) {
-                                return 'وزن باید عدد مثبت باشد';
+                              if (value == null || value.isEmpty) {
+                                return 'لطفاً وزن را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _weightController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                // Convert from kg to tonnes
-                                final weightKg = double.parse(value);
-                                _weightTonnes = weightKg / 1000.0;
+                                _weightTonnes = double.parse(value.replaceAll(',', '')) / 1000.0;
                               }
                             },
                           ),
@@ -630,29 +630,36 @@ class _CargoEditFormState extends State<CargoEditForm> {
                             controller: _priceController,
                             decoration: InputDecoration(
                               labelText: 'قیمت هر تن (تومان)',
-                              border: const OutlineInputBorder(),
                               hintText: 'مثال: 1,000,000',
+                              border: const OutlineInputBorder(),
                               helperText: _priceController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_priceController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_priceController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            textAlign: TextAlign.left,
-                            textDirection: ui.TextDirection.ltr,
+                            keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'لطفاً قیمت هر تن را وارد کنید';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'لطفاً یک عدد معتبر وارد کنید';
+                                return 'لطفاً قیمت را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _priceController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                _pricePerTonne = double.parse(value) * 10; // Convert to Rials for storage
+                                _pricePerTonne = double.parse(value.replaceAll(',', '')) * 10; // Convert to Rials
                               }
                             },
                           ),
@@ -663,29 +670,36 @@ class _CargoEditFormState extends State<CargoEditForm> {
                             controller: _transportCostController,
                             decoration: InputDecoration(
                               labelText: 'هزینه حمل هر تن (تومان)',
-                              border: const OutlineInputBorder(),
                               hintText: 'مثال: 200,000',
+                              border: const OutlineInputBorder(),
                               helperText: _transportCostController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_transportCostController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_transportCostController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            textAlign: TextAlign.left,
-                            textDirection: ui.TextDirection.ltr,
+                            keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'لطفاً هزینه حمل هر تن را وارد کنید';
-                              }
-                              if (double.tryParse(value) == null) {
-                                return 'لطفاً یک عدد معتبر وارد کنید';
+                                return 'لطفاً هزینه حمل را وارد کنید';
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _transportCostController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                _transportCostPerTonne = double.parse(value) * 10; // Convert to Rials for storage
+                                _transportCostPerTonne = double.parse(value.replaceAll(',', '')) * 10; // Convert to Rials
                               }
                             },
                           ),
@@ -731,28 +745,38 @@ class _CargoEditFormState extends State<CargoEditForm> {
                             controller: _waybillAmountController,
                             decoration: InputDecoration(
                               labelText: 'مبلغ بارنامه (تومان)',
-                              border: const OutlineInputBorder(),
                               hintText: 'اختیاری',
+                              border: const OutlineInputBorder(),
                               helperText: _waybillAmountController.text.isNotEmpty ? 
-                                'نمایش: ${formatNumberWithCommas(_waybillAmountController.text)}' : null,
+                                'نمایش: ${_numberFormat.format(int.tryParse(_waybillAmountController.text.replaceAll(',', '')) ?? 0)}' : null,
                             ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            textAlign: TextAlign.left,
-                            textDirection: ui.TextDirection.ltr,
+                            keyboardType: TextInputType.number,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             validator: (value) {
                               if (value != null && value.isNotEmpty) {
-                                if (double.tryParse(value) == null) {
+                                if (double.tryParse(value.replaceAll(',', '')) == null) {
                                   return 'لطفاً یک عدد معتبر وارد کنید';
                                 }
                               }
                               return null;
                             },
+                            onChanged: (value) {
+                              if (value.isNotEmpty) {
+                                final rawValue = value.replaceAll(',', '');
+                                final parsedValue = int.tryParse(rawValue);
+                                if (parsedValue != null) {
+                                  _waybillAmountController.value = TextEditingValue(
+                                    text: _numberFormat.format(parsedValue),
+                                    selection: TextSelection.collapsed(offset: _numberFormat.format(parsedValue).length),
+                                  );
+                                }
+                              }
+                            },
                             onSaved: (value) {
                               if (value != null && value.isNotEmpty) {
-                                _waybillAmount = double.parse(value) * 10; // Convert to Rials for storage
+                                _waybillAmount = double.parse(value.replaceAll(',', '')) * 10; // Convert to Rials
                               }
                             },
                           ),
@@ -816,10 +840,9 @@ class _CargoEditFormState extends State<CargoEditForm> {
                                             Row(
                                               mainAxisAlignment: MainAxisAlignment.end,
                                               children: [
-                                                TextButton.icon(
-                                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                                  label: const Text('حذف', style: TextStyle(color: Colors.red)),
+                                                AppButtons.deleteButton(
                                                   onPressed: _deleteWaybillImage,
+                                                  label: 'حذف',
                                                 ),
                                               ],
                                             ),
@@ -850,10 +873,9 @@ class _CargoEditFormState extends State<CargoEditForm> {
                                                   'فایل انتخاب شده: ${_waybillImagePath!.split('/').last}',
                                                   style: const TextStyle(fontSize: 12),
                                                 ),
-                                                TextButton.icon(
-                                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                                  label: const Text('حذف', style: TextStyle(color: Colors.red)),
+                                                AppButtons.deleteButton(
                                                   onPressed: _deleteWaybillImage,
+                                                  label: 'حذف',
                                                 ),
                                               ],
                                             ),
@@ -873,27 +895,17 @@ class _CargoEditFormState extends State<CargoEditForm> {
                                       
                                       // Buttons for selecting image
                                       Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                         children: [
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              onPressed: () => _pickImage(ImageSource.gallery),
-                                              icon: const Icon(Icons.photo_library),
-                                              label: const Text('انتخاب از گالری'),
-                                              style: ElevatedButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                              ),
-                                            ),
+                                          AppButtons.imageSelectionButton(
+                                            onPressed: () => _pickImage(ImageSource.gallery),
+                                            icon: Icons.photo_library,
+                                            label: 'انتخاب از گالری',
                                           ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              onPressed: () => _pickImage(ImageSource.camera),
-                                              icon: const Icon(Icons.camera_alt),
-                                              label: const Text('دوربین'),
-                                              style: ElevatedButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                              ),
-                                            ),
+                                          AppButtons.imageSelectionButton(
+                                            onPressed: () => _pickImage(ImageSource.camera),
+                                            icon: Icons.camera_alt,
+                                            label: 'دوربین',
                                           ),
                                         ],
                                       ),
@@ -912,20 +924,12 @@ class _CargoEditFormState extends State<CargoEditForm> {
                     ),
                   ),
         persistentFooterButtons: [
-          // Submit button
           if (!_isLoadingReferences && _error == null)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submitForm,
-                    child: _isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text('بروزرسانی بار'),
-                  ),
-                ),
-              ],
+            AppButtons.primaryButton(
+              onPressed: _isLoading ? () {} : () => _submitForm(),
+              icon: Icons.save,
+              label: 'بروزرسانی بار',
+              isFullWidth: true,
             ),
         ],
       ),

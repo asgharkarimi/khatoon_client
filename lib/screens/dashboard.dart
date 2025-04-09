@@ -28,14 +28,14 @@ class Dashboard extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('داشبورد'),
+          title: const Text('داشبورد', style: TextStyle(color: Colors.white)),
           centerTitle: true,
           backgroundColor: Theme.of(context).colorScheme.primary,
           foregroundColor: Colors.white,
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout, color: Colors.white),
               tooltip: 'خروج',
               onPressed: () {
                 Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
@@ -44,16 +44,7 @@ class Dashboard extends StatelessWidget {
           ],
         ),
         body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                Colors.white,
-              ],
-            ),
-          ),
+          color: Colors.grey.shade50,
           child: SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -63,65 +54,7 @@ class Dashboard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Welcome Card
-                    Hero(
-                      tag: 'welcome-card',
-                      child: Card(
-                        elevation: 4,
-                        margin: const EdgeInsets.only(bottom: 24),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Theme.of(context).colorScheme.primaryContainer,
-                                Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                              ],
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundColor: Colors.white.withOpacity(0.9),
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 30,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'خوش آمدید!',
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      userRole == UserRole.admin ? 'پنل مدیریت' : 'پنل راننده',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    SizedBox(height: 20,),
                     
                     // Quick Access
                     _buildSectionTitle(context, 'دسترسی سریع', Icons.speed),
@@ -143,13 +76,6 @@ class Dashboard extends StatelessWidget {
                           onTap: () => Navigator.pushNamed(context, CargoForm.routeName),
                         ),
                         _buildQuickAccessCard(
-                          context,
-                          title: 'مدیریت بارها',
-                          icon: Icons.list_alt_rounded,
-                          color: Theme.of(context).colorScheme.secondary,
-                          onTap: () => Navigator.pushNamed(context, CargoListScreen.routeName),
-                        ),
-                        _buildQuickAccessCard(
                           context, 
                           title: 'ثبت هزینه',
                           icon: Icons.receipt_long,
@@ -162,20 +88,6 @@ class Dashboard extends StatelessWidget {
                           icon: Icons.payments_rounded,
                           color: Colors.green,
                           onTap: () => Navigator.pushNamed(context, PaymentForm.routeName),
-                        ),
-                        _buildQuickAccessCard(
-                          context,
-                          title: 'لیست هزینه‌ها',
-                          icon: Icons.receipt_rounded,
-                          color: Colors.orange,
-                          onTap: () => Navigator.pushNamed(context, ExpenseListScreen.routeName),
-                        ),
-                        _buildQuickAccessCard(
-                          context,
-                          title: 'لیست پرداخت‌ها',
-                          icon: Icons.account_balance_wallet,
-                          color: Colors.purple,
-                          onTap: () => Navigator.pushNamed(context, PaymentListScreen.routeName),
                         ),
                       ],
                     ),
@@ -271,30 +183,37 @@ class Dashboard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildReportCard(
-                            context,
-                            title: 'گزارش حقوق رانندگان',
-                            icon: Icons.insights,
-                            color: Colors.deepPurple,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('این بخش در حال توسعه است')),
-                              );
-                            },
+                          child: Container(
+                            height: 150,
+                            child: _buildReportCard(
+                              context,
+                              title: 'گزارش حقوق رانندگان',
+                              icon: Icons.insights,
+                              color: Colors.deepPurple,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('این بخش در حال توسعه است')),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _buildReportCard(
-                            context,
-                            title: 'گزارش مالی',
-                            icon: Icons.bar_chart,
-                            color: Colors.indigo,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('این بخش در حال توسعه است')),
-                              );
-                            },
+                          child: Container(
+                            height: 150,
+                            child: _buildReportCard(
+                              context,
+                              title: 'گزارش مالی',
+                              icon: Icons.bar_chart,
+                            
+                              color: Colors.indigo,
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('این بخش در حال توسعه است')),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],
