@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 // Log request details
-error_log("Upload request received: " . $_SERVER['REQUEST_METHOD']);
+error_log("Test upload request received: " . $_SERVER['REQUEST_METHOD']);
 error_log("POST data: " . print_r($_POST, true));
 error_log("FILES data: " . print_r($_FILES, true));
 
@@ -43,9 +43,9 @@ try {
     $file_size = $_FILES['image']['size'];
     $file_type = $_FILES['image']['type'];
     
-    // Optional image type parameter
-    $image_type = isset($_POST['image_type']) ? $_POST['image_type'] : 'unknown';
-    error_log("Image type: " . $image_type);
+    // Optional test field parameter
+    $test_field = isset($_POST['test_field']) ? $_POST['test_field'] : 'No test field provided';
+    error_log("Test field: " . $test_field);
 
     // Get file extension
     $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
@@ -64,7 +64,7 @@ try {
     }
 
     // Create a unique file name
-    $new_file_name = time() . '_' . $image_type . '_' . uniqid() . '.' . $file_ext;
+    $new_file_name = 'test_' . time() . '_' . uniqid() . '.' . $file_ext;
     $file_path = $upload_dir . $new_file_name;
     error_log("Saving file to: " . $file_path);
 
@@ -82,19 +82,19 @@ try {
 
     // Set success response
     $response['success'] = true;
-    $response['message'] = 'File uploaded successfully.';
+    $response['message'] = 'Test file uploaded successfully. Test field: ' . $test_field;
     $response['file_path'] = $file_url;
     
     // Log successful upload
-    error_log("File uploaded successfully: " . $file_path);
+    error_log("Test file uploaded successfully: " . $file_path);
 
 } catch (Exception $e) {
     // Set error response
     $response['success'] = false;
     $response['message'] = $e->getMessage();
-    error_log("Upload error: " . $e->getMessage());
+    error_log("Test upload error: " . $e->getMessage());
 }
 
 // Return JSON response
 echo json_encode($response);
-?>
+?> 

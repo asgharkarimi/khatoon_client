@@ -10,6 +10,7 @@ import 'customer_form.dart';
 import 'customer_edit_form.dart';
 
 class CustomerListScreen extends StatefulWidget {
+  static const routeName = '/customers';
   const CustomerListScreen({super.key});
 
   @override

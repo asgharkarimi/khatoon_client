@@ -75,8 +75,8 @@ closeDbConnection($conn);
 function handleGet($conn, $table) {
     $id = isset($_GET['id']) ? intval($_GET['id']) : null;
 
-    // Select columns for the main cargo table
-     $baseColumns = "c.id, c.vehicle_id, c.driver_id, c.cargo_type_id, c.customer_id, c.shipping_company_id, c.selling_company_id, c.origin, c.destination, c.loading_date, c.unloading_date, c.weight_tonnes, c.price_per_tonne, c.transport_cost_per_tonne, c.customer_payment_status_id, c.seller_payment_status";
+    // Updated base columns to include the new fields
+    $baseColumns = "c.id, c.vehicle_id, c.driver_id, c.cargo_type_id, c.customer_id, c.shipping_company_id, c.selling_company_id, c.origin, c.destination, c.loading_date, c.unloading_date, c.weight_tonnes, c.price_per_tonne, c.transport_cost_per_tonne, c.customer_payment_status_id, c.seller_payment_status, c.waybill_amount, c.waybill_image, c.customer_bank_account_id";
 
     // Join with related tables to get names/details instead of just IDs
     $joins = "
@@ -87,14 +87,27 @@ function handleGet($conn, $table) {
         LEFT JOIN shipping_companies sc ON c.shipping_company_id = sc.id
         LEFT JOIN cargo_selling_companies csc ON c.selling_company_id = csc.id
         LEFT JOIN payment_types pt ON c.customer_payment_status_id = pt.id
+        LEFT JOIN bank_accounts ba ON c.customer_bank_account_id = ba.id
     ";
-    // Select additional columns from joined tables
-     $joinedColumns = ", v.name as vehicle_name, v.smart_card_number as vehicle_smart_card, CONCAT(d.first_name, ' ', d.last_name) as driver_name, d.phone_number as driver_phone, ct.name as cargo_type_name, CONCAT(cust.first_name, ' ', cust.last_name) as customer_name, cust.phone_number as customer_phone, sc.name as shipping_company_name, csc.name as selling_company_name, pt.name as customer_payment_status_name";
+    
+    // Updated joined columns to include driver salary percentage and added calculated field for driver income
+    $joinedColumns = ", v.name as vehicle_name, v.smart_card_number as vehicle_smart_card, CONCAT(d.first_name, ' ', d.last_name) as driver_name, d.phone_number as driver_phone, d.salary_percentage as driver_salary_percentage, ct.name as cargo_type_name, CONCAT(cust.first_name, ' ', cust.last_name) as customer_name, cust.phone_number as customer_phone, sc.name as shipping_company_name, csc.name as selling_company_name, pt.name as customer_payment_status_name, CONCAT(ba.bank_name, ' - ', ba.account_holder_name) as customer_bank_account_name";
+
+    // Add calculated field for driver income
+    $calculatedFields = ", CASE 
+        WHEN d.salary_percentage IS NOT NULL THEN
+            CASE 
+                WHEN c.waybill_amount IS NOT NULL AND c.waybill_amount > 0 
+                THEN ((c.weight_tonnes * c.transport_cost_per_tonne) - c.waybill_amount) * (d.salary_percentage / 100)
+                ELSE (c.weight_tonnes * c.transport_cost_per_tonne * d.salary_percentage / 100)
+            END
+        ELSE NULL
+    END as driver_income";
 
 
     if ($id) {
         // Get single record with details
-        $sql = "SELECT $baseColumns $joinedColumns FROM $table c $joins WHERE c.id = ?";
+        $sql = "SELECT $baseColumns $joinedColumns $calculatedFields FROM $table c $joins WHERE c.id = ?";
         $stmt = $conn->prepare($sql);
         if (!$stmt) { http_response_code(500); echo json_encode(["message" => "Error preparing statement: " . $conn->error]); return; }
         $stmt->bind_param("i", $id);
@@ -116,7 +129,7 @@ function handleGet($conn, $table) {
         $stmt->close();
     } else {
         // Get all records with details (consider pagination)
-         $sql = "SELECT $baseColumns $joinedColumns FROM $table c $joins ORDER BY c.loading_date DESC, c.id DESC"; // Example order
+         $sql = "SELECT $baseColumns $joinedColumns $calculatedFields FROM $table c $joins ORDER BY c.loading_date DESC, c.id DESC"; // Example order
         $result = $conn->query($sql);
         if ($result) {
             $allData = [];
@@ -192,29 +205,41 @@ function handlePost($conn, $table) {
                                   : getDefaultPaymentStatusId($conn); // Default 'Not Received'
     $seller_payment_status = isset($data['seller_payment_status']) ? filter_var($data['seller_payment_status'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : false; // Default false
 
+    // Add the new fields to sanitization
+    $waybill_amount = isset($data['waybill_amount']) ? filter_var($data['waybill_amount'], FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE) : null;
+    $waybill_image = isset($data['waybill_image']) ? sanitize($conn, $data['waybill_image']) : null;
+    $customer_bank_account_id = isset($data['customer_bank_account_id']) ? filter_var($data['customer_bank_account_id'], FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) : null;
+    
+    // Validate customer_bank_account_id if provided
+    if ($customer_bank_account_id !== null && !checkForeignKeyExists($conn, 'bank_accounts', $customer_bank_account_id)) {
+        http_response_code(400);
+        echo json_encode(["message" => "Invalid customer_bank_account_id: Bank account does not exist."]);
+        return;
+    }
+    
+    // Validate payment status ID if provided
+    if (isset($data['customer_payment_status_id']) && !checkForeignKeyExists($conn, 'payment_types', $customer_payment_status_id)) {
+        http_response_code(400);
+        echo json_encode(["message" => "Invalid customer_payment_status_id: Payment type does not exist."]);
+        return;
+    }
+    // Further validation e.g., dates format, numeric ranges if needed
 
-     // Validate payment status ID if provided
-     if (isset($data['customer_payment_status_id']) && !checkForeignKeyExists($conn, 'payment_types', $customer_payment_status_id)) {
-         http_response_code(400);
-         echo json_encode(["message" => "Invalid customer_payment_status_id: Payment type does not exist."]);
-         return;
-     }
-     // Further validation e.g., dates format, numeric ranges if needed
 
-
-    $sql = "INSERT INTO $table (vehicle_id, driver_id, cargo_type_id, customer_id, shipping_company_id, selling_company_id, origin, destination, loading_date, unloading_date, weight_tonnes, price_per_tonne, transport_cost_per_tonne, customer_payment_status_id, seller_payment_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO $table (vehicle_id, driver_id, cargo_type_id, customer_id, shipping_company_id, selling_company_id, origin, destination, loading_date, unloading_date, weight_tonnes, price_per_tonne, transport_cost_per_tonne, customer_payment_status_id, seller_payment_status, waybill_amount, waybill_image, customer_bank_account_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
      if (!$stmt) { http_response_code(500); echo json_encode(["message" => "Error preparing statement: " . $conn->error]); return; }
 
-    // Define types: i=integer, s=string, d=double
-    $types = "iiiiiiisssddiii"; // Adjust based on final variable types, especially boolean
+    // Update types and bind_param
+    $types = "iiiiiiisssddiiidsi"; // Added 'dsi' for waybill_amount (double), waybill_image (string), customer_bank_account_id (integer)
     $stmt->bind_param($types,
         $vehicle_id, $driver_id, $cargo_type_id, $customer_id, $shipping_company_id,
         $selling_company_id, $origin, $destination, $loading_date, $unloading_date,
         $weight_tonnes, $price_per_tonne, $transport_cost_per_tonne,
-        $customer_payment_status_id, $seller_payment_status
+        $customer_payment_status_id, $seller_payment_status, $waybill_amount,
+        $waybill_image, $customer_bank_account_id
     );
 
     if ($stmt->execute()) {
@@ -253,7 +278,8 @@ function handlePut($conn, $table) {
     $foreignKeyChecks = [
          'vehicle_id' => 'vehicles', 'driver_id' => 'drivers', 'cargo_type_id' => 'cargo_types',
          'customer_id' => 'customers', 'shipping_company_id' => 'shipping_companies',
-         'selling_company_id' => 'cargo_selling_companies', 'customer_payment_status_id' => 'payment_types'
+         'selling_company_id' => 'cargo_selling_companies', 'customer_payment_status_id' => 'payment_types',
+         'customer_bank_account_id' => 'bank_accounts'
     ];
 
     foreach($data as $key => $value) {
@@ -297,6 +323,14 @@ function handlePut($conn, $table) {
               $sanitizedValue = sanitize($conn, $value);
               $type = 's';
          }
+        // Handle the new fields
+        else if ($key === 'waybill_amount') {
+            $sanitizedValue = filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE);
+            $type = 'd';
+        } else if ($key === 'waybill_image') {
+            $sanitizedValue = sanitize($conn, $value);
+            $type = 's';
+        }
          // Add other specific field handlers here if necessary
 
          // If a type was determined, add to update query

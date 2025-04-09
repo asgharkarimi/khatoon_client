@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:async';
 
 import '../app_links.dart';
+import '../widgets/app_buttons.dart';
 import '../models/bank_account.dart';
 
 class BankAccountEditForm extends StatefulWidget {
@@ -207,13 +208,16 @@ class _BankAccountEditFormState extends State<BankAccountEditForm> {
                     ),
                   ),
                   const SizedBox(height: 24.0),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton.icon(
-                          icon: const Icon(Icons.save),
-                          label: const Text('ذخیره تغییرات'),
-                          onPressed: _updateBankAccount,
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: AppButtons.primaryButton(
+                      onPressed: _isLoading ? () {} : _updateBankAccount,
+                      icon: Icons.save,
+                      label: 'بروزرسانی حساب بانکی',
+                      isLoading: _isLoading,
+                      isFullWidth: true,
+                    ),
+                  ),
                 ],
               ),
             ),

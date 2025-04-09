@@ -89,13 +89,17 @@ CREATE TABLE cargos (
     transport_cost_per_tonne DECIMAL(12, 2) NOT NULL,
     customer_payment_status_id INTEGER NOT NULL, -- Default should correspond to 'Not Received'
     seller_payment_status BOOLEAN DEFAULT FALSE, -- Paid to selling company status
+    waybill_amount DECIMAL(12, 2) NULL, -- مبلغ بارنامه
+    waybill_image VARCHAR(512) NULL, -- عکس بارنامه 
+    customer_bank_account_id INTEGER NULL, -- شماره حساب اعلامی به مشتری
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
     FOREIGN KEY (driver_id) REFERENCES drivers(id),
     FOREIGN KEY (cargo_type_id) REFERENCES cargo_types(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id),
     FOREIGN KEY (shipping_company_id) REFERENCES shipping_companies(id),
     FOREIGN KEY (selling_company_id) REFERENCES cargo_selling_companies(id),
-    FOREIGN KEY (customer_payment_status_id) REFERENCES payment_types(id)
+    FOREIGN KEY (customer_payment_status_id) REFERENCES payment_types(id),
+    FOREIGN KEY (customer_bank_account_id) REFERENCES bank_accounts(id) ON DELETE SET NULL
     -- Note: Ensure the default value for customer_payment_status_id is set correctly,
     -- potentially via application logic or by querying the ID for 'Not Received' after inserting payment types.
 );

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert'; // For jsonEncode
 import 'dart:async'; // Import for TimeoutException
 import '../app_links.dart'; // Import the AppLinks class
+import '../widgets/app_buttons.dart';
+import 'dart:ui' as ui;
 
 class CustomerAddForm extends StatefulWidget {
   const CustomerAddForm({super.key});
@@ -198,18 +200,16 @@ class _CustomerAddFormState extends State<CustomerAddForm> {
                     // },
                   ),
                   const SizedBox(height: 24.0),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton.icon(
-                          icon: const Icon(Icons.add_circle_outline),
-                          label: const Text('افزودن مشتری'),
-                          onPressed: _addCustomer,
-                          // Style is inherited from the theme's ElevatedButtonThemeData
-                          // style: ElevatedButton.styleFrom(
-                          //   padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          //   textStyle: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
-                          // ),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: AppButtons.primaryButton(
+                      onPressed: _isLoading ? () {} : _addCustomer,
+                      icon: Icons.save,
+                      label: 'ثبت مشتری',
+                      isLoading: _isLoading,
+                      isFullWidth: true,
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -10,6 +10,7 @@ import 'cargo_selling_company_form.dart';
 import 'cargo_selling_company_edit_form.dart';
 
 class CargoSellingCompanyListScreen extends StatefulWidget {
+  static const routeName = '/selling-companies';
   const CargoSellingCompanyListScreen({super.key});
 
   @override

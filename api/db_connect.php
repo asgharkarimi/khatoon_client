@@ -1,12 +1,15 @@
 <?php
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Origin: *"); // Allow requests from any origin (adjust for production)
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+// Only set headers if running in a web server context
+if (php_sapi_name() !== 'cli') {
+    header("Content-Type: application/json; charset=UTF-8");
+    header("Access-Control-Allow-Origin: *"); // Allow requests from any origin (adjust for production)
+    header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-// Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    exit(0);
+    // Handle preflight OPTIONS request
+    if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+        exit(0);
+    }
 }
 
 // --- IMPORTANT: Replace with your actual database credentials ---
@@ -21,16 +24,24 @@ $conn = new mysqli($servername, $username, $password);
 
 // Check connection
 if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["message" => "Database connection failed: " . $conn->connect_error]);
+    if (php_sapi_name() === 'cli') {
+        echo "Database connection failed: " . $conn->connect_error . "\n";
+    } else {
+        http_response_code(500);
+        echo json_encode(["message" => "Database connection failed: " . $conn->connect_error]);
+    }
     exit();
 }
 
 // Create database if it doesn't exist
 $sql = "CREATE DATABASE IF NOT EXISTS $dbname CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
 if (!$conn->query($sql)) {
-    http_response_code(500);
-    echo json_encode(["message" => "Error creating database: " . $conn->error]);
+    if (php_sapi_name() === 'cli') {
+        echo "Error creating database: " . $conn->error . "\n";
+    } else {
+        http_response_code(500);
+        echo json_encode(["message" => "Error creating database: " . $conn->error]);
+    }
     $conn->close();
     exit();
 }
@@ -40,8 +51,12 @@ $conn->select_db($dbname);
 
 // Set charset to UTF8
 if (!$conn->set_charset("utf8mb4")) {
-    http_response_code(500);
-    echo json_encode(["message" => "Error setting character set: " . $conn->error]);
+    if (php_sapi_name() === 'cli') {
+        echo "Error setting character set: " . $conn->error . "\n";
+    } else {
+        http_response_code(500);
+        echo json_encode(["message" => "Error setting character set: " . $conn->error]);
+    }
     $conn->close();
     exit();
 }

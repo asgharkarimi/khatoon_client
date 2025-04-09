@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
-
 import '../app_links.dart';
+import '../widgets/app_buttons.dart';
+import 'dart:ui' as ui;
 
 class BankAccountAddForm extends StatefulWidget {
   const BankAccountAddForm({super.key});
@@ -195,13 +196,16 @@ class _BankAccountAddFormState extends State<BankAccountAddForm> {
                     ),
                   ),
                   const SizedBox(height: 24.0),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton.icon(
-                          icon: const Icon(Icons.add_circle_outline),
-                          label: const Text('افزودن حساب بانکی'),
-                          onPressed: _addBankAccount,
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: AppButtons.primaryButton(
+                      onPressed: _isLoading ? () {} : _addBankAccount,
+                      icon: Icons.add_circle_outline,
+                      label: 'افزودن حساب بانکی',
+                      isLoading: _isLoading,
+                      isFullWidth: true,
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -10,6 +10,7 @@ import 'vehicle_form.dart';
 import 'vehicle_edit_form.dart';
 
 class VehicleListScreen extends StatefulWidget {
+  static const routeName = '/vehicles';
   const VehicleListScreen({super.key});
 
   @override

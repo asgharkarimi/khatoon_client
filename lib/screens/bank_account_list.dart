@@ -10,6 +10,7 @@ import 'bank_account_form.dart';
 import 'bank_account_edit_form.dart';
 
 class BankAccountListScreen extends StatefulWidget {
+  static const routeName = '/bank-accounts';
   const BankAccountListScreen({super.key});
 
   @override
@@ -253,7 +254,7 @@ class _BankAccountListScreenState extends State<BankAccountListScreen> {
                         subtitle: Text(bankAccount.iban!),
                         dense: true,
                       ),
-                    ButtonBar(
+                    OverflowBar(
                       alignment: MainAxisAlignment.center,
                       children: [
                         AppButtons.primaryButton(

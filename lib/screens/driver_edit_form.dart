@@ -29,8 +29,10 @@ class _DriverEditFormState extends State<DriverEditForm> {
   late final TextEditingController _phoneNumberController;
   late final TextEditingController _salaryPercentageController;
   late final TextEditingController _nationalIdController;
+  late final TextEditingController _passwordController;
   bool _isLoading = false;
   bool _isUploadingImages = false;
+  String _errorMessage = '';
   
   // Image paths for newly selected images
   String? _nationalIdCardImagePath;
@@ -59,6 +61,7 @@ class _DriverEditFormState extends State<DriverEditForm> {
     _salaryPercentageController = TextEditingController(
         text: widget.driver.salaryPercentage?.toString() ?? '');
     _nationalIdController = TextEditingController(text: widget.driver.nationalId ?? '');
+    _passwordController = TextEditingController();
     
     // Initialize image URLs from the driver model
     _nationalIdCardImageUrl = widget.driver.nationalIdCardImage;
@@ -73,40 +76,53 @@ class _DriverEditFormState extends State<DriverEditForm> {
     _phoneNumberController.dispose();
     _salaryPercentageController.dispose();
     _nationalIdController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
   
   // Upload an image to the server
   Future<String?> _uploadImage(String imagePath, String imageType) async {
     try {
+      print('Starting image upload for type: $imageType');
+      print('Image path: $imagePath');
+      
       // Create a multipart request
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse(AppLinks.upload),
+        Uri.parse(AppLinks.uploadImage),
       );
       
+      print('Upload URL: ${AppLinks.uploadImage}');
+      
       // Add the image file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image', 
-          imagePath,
-          filename: '${DateTime.now().millisecondsSinceEpoch}_${imageType}_${imagePath.split('/').last}',
-        ),
+      final file = await http.MultipartFile.fromPath(
+        'image', 
+        imagePath,
+        filename: '${DateTime.now().millisecondsSinceEpoch}_${imageType}_${imagePath.split('/').last}',
       );
+      request.files.add(file);
+      print('Added file to request: ${file.filename}');
       
       // Add image type as additional field
       request.fields['image_type'] = imageType;
+      print('Added image_type field: $imageType');
       
       // Send the request
+      print('Sending request...');
       final response = await request.send().timeout(const Duration(seconds: 30));
+      print('Response status code: ${response.statusCode}');
       
       // Check if upload was successful
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse the response
         final responseString = await response.stream.bytesToString();
+        print('Raw response: $responseString');
+        
         final responseData = jsonDecode(responseString);
+        print('Parsed response data: $responseData');
         
         if (responseData['success'] == true && responseData['file_path'] != null) {
+          print('Upload successful. File path: ${responseData['file_path']}');
           return responseData['file_path'];
         } else {
           print('Upload error: ${responseData['message'] ?? 'Unknown error'}');
@@ -116,8 +132,9 @@ class _DriverEditFormState extends State<DriverEditForm> {
         print('Upload failed with status: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Exception during upload: $e');
+      print('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -287,18 +304,18 @@ class _DriverEditFormState extends State<DriverEditForm> {
               ],
             ),
             actions: [
-              TextButton(
+              AppButtons.textButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('بعداً'),
+                label: 'بعداً',
               ),
-              TextButton(
+              AppButtons.textButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   openAppSettings();
                 },
-                child: const Text('رفتن به تنظیمات'),
+                label: 'رفتن به تنظیمات',
               ),
             ],
           ),
@@ -336,7 +353,7 @@ class _DriverEditFormState extends State<DriverEditForm> {
       // Create a test multipart request
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${AppLinks.baseUrl}/test_upload.php'),
+        Uri.parse('${AppLinks.baseUrl}/api/test_upload.php'),
       );
       
       // Add the image file to the request
@@ -508,11 +525,11 @@ class _DriverEditFormState extends State<DriverEditForm> {
               ],
             ),
             actions: [
-              TextButton(
+              AppButtons.textButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: const Text('متوجه شدم'),
+                label: 'متوجه شدم',
               ),
             ],
           ),
@@ -567,9 +584,9 @@ class _DriverEditFormState extends State<DriverEditForm> {
               ),
             ),
             actions: [
-              TextButton(
+              AppButtons.textButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('انصراف'),
+                label: 'انصراف',
               ),
             ],
           ),
@@ -672,13 +689,13 @@ class _DriverEditFormState extends State<DriverEditForm> {
       });
 
       try {
-        // Step 1: Upload images if any have changed
-        bool hasChangedImages = _isNationalIdCardImageChanged || 
-                               _isDriverLicenseImageChanged || 
-                               _isDriverSmartCardImageChanged;
+        // Step 1: Upload images if any are selected
+        bool hasImages = _nationalIdCardImagePath != null || 
+                         _driverLicenseImagePath != null || 
+                         _driverSmartCardImagePath != null;
         
         bool uploadSuccess = true;
-        if (hasChangedImages) {
+        if (hasImages) {
           uploadSuccess = await _uploadAllImages();
           if (!uploadSuccess) {
             throw Exception('Failed to upload one or more images');
@@ -687,7 +704,6 @@ class _DriverEditFormState extends State<DriverEditForm> {
 
         // Step 2: Send driver data with uploaded image URLs
         final driverData = <String, dynamic>{
-          'id': widget.driver.id,
           'first_name': _firstNameController.text.trim(),
           'last_name': _lastNameController.text.trim(),
           'phone_number': _phoneNumberController.text.trim().isNotEmpty
@@ -699,15 +715,27 @@ class _DriverEditFormState extends State<DriverEditForm> {
           'national_id': _nationalIdController.text.trim().isNotEmpty
               ? _nationalIdController.text.trim()
               : null,
-          'national_id_card_image': _nationalIdCardImageUrl,
-          'driver_license_image': _driverLicenseImageUrl,
-          'driver_smart_card_image': _driverSmartCardImageUrl,
-          // Note: Password is not included in edit form to avoid changing it unintentionally
         };
+        
+        // Only include password if it's been changed
+        if (_passwordController.text.trim().isNotEmpty) {
+          driverData['password'] = _passwordController.text.trim();
+        }
+        
+        // Only include image URLs if they've been updated
+        if (_nationalIdCardImageUrl != null) {
+          driverData['national_id_card_image'] = _nationalIdCardImageUrl;
+        }
+        if (_driverLicenseImageUrl != null) {
+          driverData['driver_license_image'] = _driverLicenseImageUrl;
+        }
+        if (_driverSmartCardImageUrl != null) {
+          driverData['driver_smart_card_image'] = _driverSmartCardImageUrl;
+        }
         
         // Debug print driver data
         print('\n======= راننده ویرایش شد =======');
-        print('شناسه: ${widget.driver.id}');
+        print('id: ${widget.driver.id}');
         driverData.forEach((key, value) {
           print('$key: $value');
         });
@@ -720,8 +748,9 @@ class _DriverEditFormState extends State<DriverEditForm> {
         print(jsonBody);
         print('=================================\n');
 
+        // Use the correct URL format with ID as a query parameter
         final response = await http.put(
-          Uri.parse(AppLinks.updateDriverById(widget.driver.id)),
+          Uri.parse('${AppLinks.drivers}?id=${widget.driver.id}'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
           },
@@ -733,6 +762,30 @@ class _DriverEditFormState extends State<DriverEditForm> {
         print('Status Code: ${response.statusCode}');
         print('Response Body: ${response.body}');
         print('========================\n');
+
+        // Check if the response contains HTML error (PHP error)
+        if (response.body.contains('<br />') || response.body.contains('<b>Fatal error</b>')) {
+          // Extract error message from PHP error
+          String errorMessage = 'خطا در ویرایش اطلاعات راننده';
+          
+          if (response.body.contains('Duplicate entry') && response.body.contains('national_id')) {
+            errorMessage = 'کد ملی تکراری است. لطفا از کد ملی دیگری استفاده کنید.';
+          } else if (response.body.contains('Duplicate entry') && response.body.contains('phone_number')) {
+            errorMessage = 'شماره تلفن تکراری است. لطفا از شماره تلفن دیگری استفاده کنید.';
+          }
+          
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
 
         // Decode response body safely
         Map<String, dynamic>? responseData;
@@ -748,12 +801,20 @@ class _DriverEditFormState extends State<DriverEditForm> {
             message = 'Error processing server response.';
           }
         } else if (response.statusCode == 200) {
-          message = "راننده با موفقیت به‌روزرسانی شد.";
+          message = "اطلاعات راننده با موفقیت بروزرسانی شد.";
         } else {
           message = "Received empty response (Code: ${response.statusCode})";
         }
 
         if (!mounted) return; // Check if widget is still in the tree
+
+        if (response.body.isEmpty) {
+          setState(() {
+            _errorMessage = 'Empty response from server.';
+            _isLoading = false;
+          });
+          return;
+        }
 
         if (response.statusCode == 200) {
           // Success

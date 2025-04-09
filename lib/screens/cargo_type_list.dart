@@ -10,6 +10,7 @@ import 'cargo_type_form.dart';
 import 'cargo_type_edit_form.dart';
 
 class CargoTypeListScreen extends StatefulWidget {
+  static const routeName = '/cargo-types';
   const CargoTypeListScreen({super.key});
 
   @override

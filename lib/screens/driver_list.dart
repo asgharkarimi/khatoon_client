@@ -10,6 +10,7 @@ import 'driver_form.dart';
 import 'driver_edit_form.dart';
 
 class DriverListScreen extends StatefulWidget {
+  static const routeName = '/drivers';
   const DriverListScreen({super.key});
 
   @override

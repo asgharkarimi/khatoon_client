@@ -26,6 +26,7 @@ class _DriverFormState extends State<DriverForm> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isUploadingImages = false;
+  String _errorMessage = '';
   
   // Image paths and uploaded URLs
   String? _nationalIdCardImagePath;
@@ -54,34 +55,52 @@ class _DriverFormState extends State<DriverForm> {
   // Upload an image to the server
   Future<String?> _uploadImage(String imagePath, String imageType) async {
     try {
+      print('Starting image upload for type: $imageType');
+      print('Image path: $imagePath');
+      
       // Create a multipart request
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${AppLinks.baseUrl}/upload.php'),
+        Uri.parse(AppLinks.uploadImage),
       );
       
-      // Add the image file to the request
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image', 
-          imagePath,
-          filename: '${DateTime.now().millisecondsSinceEpoch}_${imageType}_${imagePath.split('/').last}',
-        ),
+      print('Upload URL: ${AppLinks.uploadImage}');
+      
+      // Get file extension
+      final fileExtension = imagePath.split('.').last;
+      
+      // Create new filename with prefix and timestamp
+      final newFilename = 'khatoonbar_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+      
+      // Add the image file to the request with new filename
+      final file = await http.MultipartFile.fromPath(
+        'image', 
+        imagePath,
+        filename: newFilename,
       );
+      request.files.add(file);
+      print('Added file to request: ${file.filename}');
       
       // Add image type as additional field
       request.fields['image_type'] = imageType;
+      print('Added image_type field: $imageType');
       
       // Send the request
+      print('Sending request...');
       final response = await request.send().timeout(const Duration(seconds: 30));
+      print('Response status code: ${response.statusCode}');
       
       // Check if upload was successful
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Parse the response
         final responseString = await response.stream.bytesToString();
+        print('Raw response: $responseString');
+        
         final responseData = jsonDecode(responseString);
+        print('Parsed response data: $responseData');
         
         if (responseData['success'] == true && responseData['file_path'] != null) {
+          print('Upload successful. File path: ${responseData['file_path']}');
           return responseData['file_path'];
         } else {
           print('Upload error: ${responseData['message'] ?? 'Unknown error'}');
@@ -91,8 +110,9 @@ class _DriverFormState extends State<DriverForm> {
         print('Upload failed with status: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Exception during upload: $e');
+      print('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -452,9 +472,9 @@ class _DriverFormState extends State<DriverForm> {
               ),
             ),
             actions: [
-              TextButton(
+              AppButtons.textButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('انصراف'),
+                label: 'انصراف',
               ),
             ],
           ),
@@ -517,6 +537,33 @@ class _DriverFormState extends State<DriverForm> {
                 ),
               ),
             ),
+            if (currentImagePath != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => _removeImage(imageType),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      size: 20,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ],
@@ -593,6 +640,30 @@ class _DriverFormState extends State<DriverForm> {
         print('Response Body: ${response.body}');
         print('========================\n');
 
+        // Check if the response contains HTML error (PHP error)
+        if (response.body.contains('<br />') || response.body.contains('<b>Fatal error</b>')) {
+          // Extract error message from PHP error
+          String errorMessage = 'خطا در ثبت اطلاعات راننده';
+          
+          if (response.body.contains('Duplicate entry') && response.body.contains('national_id')) {
+            errorMessage = 'کد ملی تکراری است. لطفا از کد ملی دیگری استفاده کنید.';
+          } else if (response.body.contains('Duplicate entry') && response.body.contains('phone_number')) {
+            errorMessage = 'شماره تلفن تکراری است. لطفا از شماره تلفن دیگری استفاده کنید.';
+          }
+          
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
         // Decode response body safely
         Map<String, dynamic>? responseData;
         String message = 'An unknown error occurred.'; // Default message
@@ -613,6 +684,14 @@ class _DriverFormState extends State<DriverForm> {
         }
 
         if (!mounted) return; // Check if widget is still in the tree
+
+        if (response.body.isEmpty) {
+          setState(() {
+            _errorMessage = 'Empty response from server.';
+            _isLoading = false;
+          });
+          return;
+        }
 
         if (response.statusCode == 201) {
           // Success
@@ -732,7 +811,7 @@ class _DriverFormState extends State<DriverForm> {
       print("\nدر حال آماده‌سازی درخواست آپلود...");
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('${AppLinks.baseUrl}/test_upload.php'),
+        Uri.parse('${AppLinks.baseUrl}/api/test_upload.php'),
       );
       
       // Add the image file to the request
@@ -803,6 +882,25 @@ class _DriverFormState extends State<DriverForm> {
     }
     
     print("--- پایان تست آپلود تصویر ---\n\n");
+  }
+
+  void _removeImage(int imageType) {
+    setState(() {
+      switch (imageType) {
+        case 1:
+          _nationalIdCardImagePath = null;
+          _nationalIdCardImageUrl = null;
+          break;
+        case 2:
+          _driverLicenseImagePath = null;
+          _driverLicenseImageUrl = null;
+          break;
+        case 3:
+          _driverSmartCardImagePath = null;
+          _driverSmartCardImageUrl = null;
+          break;
+      }
+    });
   }
 
   @override
@@ -960,6 +1058,8 @@ class _DriverFormState extends State<DriverForm> {
                           onPressed: _addDriver,
                           icon: Icons.save,
                           label: 'ثبت راننده',
+                          isLoading: _isLoading,
+                          isFullWidth: true,
                         ),
                   const SizedBox(height: 16.0),
                 ],
