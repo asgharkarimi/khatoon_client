@@ -15,7 +15,16 @@ import 'screens/payment_form.dart';
 import 'screens/expense_list.dart';
 import 'screens/expense_form.dart';
 import 'screens/login_screen.dart';
+import 'screens/driver_income_report.dart';
+import 'screens/driver_form.dart';
+import 'screens/customer_form.dart';
+import 'screens/cargo_type_form.dart';
+import 'screens/shipping_company_form.dart';
+import 'screens/cargo_selling_company_form.dart';
+import 'screens/bank_account_form.dart';
+import 'screens/vehicle_form.dart';
 import 'common/enums.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 void main() {
   runApp(const MyApp());
@@ -96,6 +105,9 @@ class MyApp extends StatelessWidget {
         ),
       ),
       localizationsDelegates: const [
+        
+        PersianMaterialLocalizations.delegate,
+        PersianCupertinoLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -119,7 +131,33 @@ class MyApp extends StatelessWidget {
         PaymentForm.routeName: (ctx) => const PaymentForm(),
         ExpenseListScreen.routeName: (ctx) => const ExpenseListScreen(),
         ExpenseForm.routeName: (ctx) => const ExpenseForm(),
+        DriverIncomeReportScreen.routeName: (ctx) => const DriverIncomeReportScreen(),
+        DriverForm.routeName: (ctx) => const DriverForm(),
+        CustomerAddForm.routeName: (ctx) => const CustomerAddForm(),
+        CargoTypeForm.routeName: (ctx) => const CargoTypeForm(),
+        ShippingCompanyForm.routeName: (ctx) => const ShippingCompanyForm(),
+        CargoSellingCompanyForm.routeName: (ctx) => const CargoSellingCompanyForm(),
+        BankAccountForm.routeName: (ctx) => const BankAccountForm(),
+        VehicleForm.routeName: (ctx) => const VehicleForm(),
       },
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+// echo "# khatoonbarapi" >> README.md
+// git init
+// git add README.md
+// git commit -m "first commit"
+// git branch -M main
+// git remote add origin https://github.com/asgharkarimi/khatoonbar_client.git
+// git push -u origin main

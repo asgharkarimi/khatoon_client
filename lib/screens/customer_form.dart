@@ -7,6 +7,8 @@ import '../widgets/app_buttons.dart';
 import 'dart:ui' as ui;
 
 class CustomerAddForm extends StatefulWidget {
+  static const routeName = '/customer-form';
+  
   const CustomerAddForm({super.key});
 
   @override

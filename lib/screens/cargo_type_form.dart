@@ -6,6 +6,8 @@ import '../app_links.dart';
 import '../widgets/app_buttons.dart';
 
 class CargoTypeForm extends StatefulWidget {
+  static const routeName = '/cargo-type-form';
+  
   const CargoTypeForm({super.key});
 
   @override

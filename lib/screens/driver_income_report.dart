@@ -5,8 +5,10 @@ import 'dart:convert';
 import '../app_links.dart';
 import '../models/cargo_model.dart';
 import '../models/driver.dart';
-import '../widgets/app_buttons.dart';
+import '../common/app_theme.dart';
 import 'dart:ui' as ui;
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 class DriverIncomeReportScreen extends StatefulWidget {
   static const routeName = '/driver-income-report';
@@ -72,18 +74,18 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
   }
 
   // Format date string to a human-readable format
-  String _formatDate(String dateString) {
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'تاریخ نامشخص';
     try {
       final date = DateTime.parse(dateString);
-      return '${date.year}/${date.month}/${date.day}';
+      return Jalali.fromDateTime(date).formatFullDate();
     } catch (e) {
       return dateString;
     }
   }
 
-  // Calculate driver's income for a cargo - Use the server-provided value
+  // Calculate driver's income for a cargo
   double _getDriverIncome(Cargo cargo) {
-    // Return the server-calculated income value
     return cargo.driverIncome ?? 0.0;
   }
 
@@ -94,12 +96,20 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
         return false;
       }
       if (_startDate != null && cargo.loadingDate != null) {
-        final loadingDate = DateTime.parse(cargo.loadingDate!);
-        if (loadingDate.isBefore(_startDate!)) return false;
+        try {
+          final loadingDate = DateTime.parse(cargo.loadingDate!);
+          if (loadingDate.isBefore(_startDate!)) return false;
+        } catch (e) {
+          // Skip date filtering if parsing fails
+        }
       }
       if (_endDate != null && cargo.loadingDate != null) {
-        final loadingDate = DateTime.parse(cargo.loadingDate!);
-        if (loadingDate.isAfter(_endDate!)) return false;
+        try {
+          final loadingDate = DateTime.parse(cargo.loadingDate!);
+          if (loadingDate.isAfter(_endDate!)) return false;
+        } catch (e) {
+          // Skip date filtering if parsing fails
+        }
       }
       return true;
     }).toList();
@@ -114,218 +124,536 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
     return filteredCargos.fold(0, (sum, cargo) => sum + _getDriverIncome(cargo));
   }
 
+  // Helper method to convert Gregorian to Jalali for display with Persian month names
+  String _formatJalaliDate(DateTime? dateTime) {
+    if (dateTime == null) return 'تاریخ نامشخص';
+    final jalali = Jalali.fromDateTime(dateTime);
+    // Use a shorter format to avoid overflow
+    return '${jalali.formatter.d} ${jalali.formatter.mN} ${jalali.formatter.yy}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredCargos = _getFilteredCargos();
+    final totalIncome = _calculateTotalIncome();
+    final selectedDriver = _selectedDriverId != null 
+        ? _drivers.firstWhere((driver) => driver.id == _selectedDriverId, orElse: () => Driver(id: 0, firstName: '', lastName: ''))
+        : null;
+
     return Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
-          title: const Text('گزارش درآمد رانندگان'),
+          title: const Text('گزارش درآمد رانندگان', 
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+            )
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          foregroundColor: AppTheme.primaryColor,
+          elevation: 0,
         ),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
             : _error != null
-                ? Center(child: Text(_error!))
-                : Column(
-                    children: [
-                      // Filters
-                      Card(
-                        margin: const EdgeInsets.all(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              // Driver selection
-                              DropdownButtonFormField<int>(
-                                value: _selectedDriverId,
-                                decoration: const InputDecoration(
-                                  labelText: 'انتخاب راننده',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: _drivers.map((driver) {
-                                  return DropdownMenuItem<int>(
-                                    value: driver.id,
-                                    child: Text(driver.fullName),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedDriverId = value;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              // Date range selection
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: AppButtons.textButton(
-                                      onPressed: () async {
-                                        final date = await showDatePicker(
-                                          context: context,
-                                          initialDate: _startDate ?? DateTime.now(),
-                                          firstDate: DateTime(2020),
-                                          lastDate: DateTime.now(),
-                                        );
-                                        if (date != null) {
-                                          setState(() {
-                                            _startDate = date;
-                                          });
-                                        }
-                                      },
-                                      label: _startDate != null
-                                          ? 'از: ${_startDate!.year}/${_startDate!.month}/${_startDate!.day}'
-                                          : 'از تاریخ',
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: AppButtons.textButton(
-                                      onPressed: () async {
-                                        final date = await showDatePicker(
-                                          context: context,
-                                          initialDate: _endDate ?? DateTime.now(),
-                                          firstDate: DateTime(2020),
-                                          lastDate: DateTime.now(),
-                                        );
-                                        if (date != null) {
-                                          setState(() {
-                                            _endDate = date;
-                                          });
-                                        }
-                                      },
-                                      label: _endDate != null
-                                          ? 'تا: ${_endDate!.year}/${_endDate!.month}/${_endDate!.day}'
-                                          : 'تا تاریخ',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline, color: AppTheme.errorColor, size: 48),
+                        const SizedBox(height: 16),
+                        Text(_error!, style: TextStyle(color: Colors.grey.shade700)),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: _fetchData,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('تلاش مجدد'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
                           ),
                         ),
-                      ),
-                      // Summary card
-                      if (_selectedDriverId != null)
-                        Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'جمع درآمد: ${_formatNumber(_calculateTotalIncome())} تومان',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Filter Card
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Driver selection
+                                  Text(
+                                    'فیلترها',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  DropdownButtonFormField<int>(
+                                    value: _selectedDriverId,
+                                    decoration: InputDecoration(
+                                      labelText: 'انتخاب راننده',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      prefixIcon: Icon(Icons.person, color: AppTheme.primaryColor),
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem<int>(
+                                        value: null,
+                                        child: Text('همه رانندگان'),
+                                      ),
+                                      ..._drivers.map((driver) {
+                                        return DropdownMenuItem<int>(
+                                          value: driver.id,
+                                          child: Text(driver.fullName),
+                                        );
+                                      }).toList(),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedDriverId = value;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  
+                                  // Date range selection
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            Jalali? picked = await showPersianDatePicker(
+                                              context: context,
+                                              initialDate: _startDate != null ? Jalali.fromDateTime(_startDate!) : Jalali.now(),
+                                              firstDate: Jalali(1380, 1),
+                                              lastDate: Jalali.now(),
+                                              locale: const Locale('fa', 'IR'),
+                                              useRootNavigator: true,
+                                              builder: (context, child) {
+                                                return Theme(
+                                                  data: ThemeData(
+                                                    fontFamily: 'Vazir',
+                                                    primaryColor: AppTheme.primaryColor,
+                                                    colorScheme: ColorScheme.light(primary: AppTheme.primaryColor),
+                                                    buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+                                                    textTheme: const TextTheme(
+                                                      titleMedium: TextStyle(fontFamily: 'Vazir'),
+                                                      bodyLarge: TextStyle(fontFamily: 'Vazir'),
+                                                      bodyMedium: TextStyle(fontFamily: 'Vazir'),
+                                                      labelLarge: TextStyle(fontFamily: 'Vazir'),
+                                                    ),
+                                                  ),
+                                                  child: Directionality(
+                                                    textDirection: ui.TextDirection.rtl,
+                                                    child: child!,
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                            
+                                            if (picked != null) {
+                                              setState(() {
+                                                _startDate = picked.toDateTime();
+                                              });
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: Colors.grey.shade400),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.calendar_today, size: 18, color: AppTheme.primaryColor),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    _startDate != null
+                                                        ? 'از: ${_formatJalaliDate(_startDate!)}'
+                                                        : 'از تاریخ',
+                                                    style: TextStyle(
+                                                      color: _startDate != null ? Colors.black : Colors.grey.shade600,
+                                                      fontSize: 13,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: InkWell(
+                                          onTap: () async {
+                                            Jalali? picked = await showPersianDatePicker(
+                                              context: context,
+                                              initialDate: _endDate != null ? Jalali.fromDateTime(_endDate!) : Jalali.now(),
+                                              firstDate: Jalali(1380, 1),
+                                              lastDate: Jalali.now(),
+                                              locale: const Locale('fa', 'IR'),
+                                              useRootNavigator: true,
+                                              builder: (context, child) {
+                                                return Theme(
+                                                  data: ThemeData(
+                                                    fontFamily: 'Vazir',
+                                                    primaryColor: AppTheme.primaryColor,
+                                                    colorScheme: ColorScheme.light(primary: AppTheme.primaryColor),
+                                                    buttonTheme: const ButtonThemeData(textTheme: ButtonTextTheme.primary),
+                                                    textTheme: const TextTheme(
+                                                      titleMedium: TextStyle(fontFamily: 'Vazir'),
+                                                      bodyLarge: TextStyle(fontFamily: 'Vazir'),
+                                                      bodyMedium: TextStyle(fontFamily: 'Vazir'),
+                                                      labelLarge: TextStyle(fontFamily: 'Vazir'),
+                                                    ),
+                                                  ),
+                                                  child: Directionality(
+                                                    textDirection: ui.TextDirection.rtl,
+                                                    child: child!,
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                            if (picked != null) {
+                                              setState(() {
+                                                _endDate = picked.toDateTime();
+                                              });
+                                            }
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(color: Colors.grey.shade400),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.calendar_today, size: 18, color: AppTheme.primaryColor),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Text(
+                                                    _endDate != null
+                                                        ? 'تا: ${_formatJalaliDate(_endDate!)}'
+                                                        : 'تا تاریخ',
+                                                    style: TextStyle(
+                                                      color: _endDate != null ? Colors.black : Colors.grey.shade600,
+                                                      fontSize: 13,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 1,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 16),
+                                  
+                                  // Reset filters button
+                                  if (_selectedDriverId != null || _startDate != null || _endDate != null)
+                                    Center(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedDriverId = null;
+                                            _startDate = null;
+                                            _endDate = null;
+                                          });
+                                        },
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('پاک کردن فیلترها'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppTheme.primaryColor,
+                                          side: BorderSide(color: AppTheme.primaryColor),
+                                        ),
                                       ),
                                     ),
-                                    Tooltip(
-                                      message: 'فرمول محاسبه درآمد راننده: ((وزن بار × هزینه حمل) - مبلغ بارنامه) × درصد حقوق راننده',
-                                      child: const Icon(Icons.info_outline, size: 18),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'فرمول محاسبه: ((وزن بار × هزینه حمل) - مبلغ بارنامه) × درصد حقوق',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      // Cargo list
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: _getFilteredCargos().length,
-                          itemBuilder: (context, index) {
-                            final cargo = _getFilteredCargos()[index];
-                            final driver = _drivers.firstWhere((d) => d.id == cargo.driverId);
-                            final income = _getDriverIncome(cargo);
-                            
-                            // Calculate total transport cost
-                            final totalTransportCost = cargo.weightTonnes * cargo.transportCostPerTonne;
-                            
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Summary card
+                          if (_selectedDriverId != null && selectedDriver != null)
+                            Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppTheme.primaryColor.withOpacity(0.8),
+                                      AppTheme.secondaryColor.withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Cargo basic info
-                                    Text(
-                                      '${cargo.origin} به ${cargo.destination}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    
-                                    // Transport details
                                     Row(
                                       children: [
-                                        Expanded(
-                                          child: Text('وزن: ${_formatNumber(cargo.weightTonnes)} تن'),
+                                        CircleAvatar(
+                                          backgroundColor: Colors.white.withOpacity(0.2),
+                                          radius: 24,
+                                          child: const Icon(
+                                            Icons.person,
+                                            color: Colors.white,
+                                            size: 28,
+                                          ),
                                         ),
-                                        Expanded(
-                                          child: Text('هزینه حمل: ${_formatNumber(cargo.transportCostPerTonne)} تومان'),
+                                        const SizedBox(width: 16),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              selectedDriver.fullName,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            Text(
+                                              'مجموع درآمد: ${_formatNumber(totalIncome)} تومان',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                    const Divider(),
-                                    
-                                    // Income calculation
-                                    Text('هزینه کل حمل: ${_formatNumber(totalTransportCost)} تومان'),
-                                    if (cargo.waybillAmount != null && cargo.waybillAmount! > 0)
-                                      Text('کسر بارنامه: ${_formatNumber(cargo.waybillAmount!)} تومان', 
-                                           style: const TextStyle(color: Colors.red)),
-                                    Text('درصد حقوق: ${driver.salaryPercentage}%'),
-                                    const SizedBox(height: 8),
-                                    
-                                    // Final income
-                                    Text(
-                                      'درآمد راننده: ${_formatNumber(income)} تومان',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                    
-                                    // Add calculation example
-                                    if (cargo.waybillAmount != null && cargo.waybillAmount! > 0)
-                                      Text(
-                                        'محاسبه: ((${_formatNumber(cargo.weightTonnes)} × ${_formatNumber(cargo.transportCostPerTonne)}) - ${_formatNumber(cargo.waybillAmount!)}) × ${driver.salaryPercentage}%',
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                      )
-                                    else
-                                      Text(
-                                        'محاسبه: (${_formatNumber(cargo.weightTonnes)} × ${_formatNumber(cargo.transportCostPerTonne)}) × ${driver.salaryPercentage}%',
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                      ),
-                                    
-                                    // Loading date if available
-                                    if (cargo.loadingDate != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 8),
-                                        child: Text(
-                                          'تاریخ بارگیری: ${_formatDate(cargo.loadingDate!)}',
-                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        _buildSummaryItem(
+                                          'تعداد بارها',
+                                          filteredCargos.length.toString(),
                                         ),
-                                      ),
+                                        _buildSummaryItem(
+                                          'میانگین درآمد هر بار',
+                                          filteredCargos.isEmpty
+                                              ? '0 تومان'
+                                              : '${_formatNumber(totalIncome / filteredCargos.length)} تومان',
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // Cargo list
+                          Text(
+                            'لیست بارها ${_selectedDriverId != null ? 'برای ${selectedDriver?.fullName}' : ''}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          if (filteredCargos.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.inventory,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'هیچ باری با فیلترهای انتخاب شده یافت نشد.',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 16,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: filteredCargos.length,
+                              itemBuilder: (context, index) {
+                                final cargo = filteredCargos[index];
+                                return _buildCargoCard(cargo);
+                              },
+                            ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
       ),
     );
   }
-} 
+  
+  Widget _buildSummaryItem(String title, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildCargoCard(Cargo cargo) {
+    final driverName = cargo.driverName ?? 'نامشخص';
+    final driverIncome = _getDriverIncome(cargo);
+    
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'از ${cargo.origin} به ${cargo.destination}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    cargo.cargoTypeName ?? 'نامشخص',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildCargoInfo(Icons.calendar_today, 'تاریخ حمل: ${_formatDate(cargo.loadingDate)}'),
+                const SizedBox(width: 16),
+                _buildCargoInfo(Icons.local_shipping, 'راننده: $driverName'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildCargoInfo(Icons.line_weight, 'وزن: ${cargo.weightTonnes} تن'),
+                const SizedBox(width: 16),
+                _buildCargoInfo(Icons.attach_money, 'درآمد راننده: ${_formatNumber(driverIncome)} تومان'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCargoInfo(IconData icon, String text) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade700,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

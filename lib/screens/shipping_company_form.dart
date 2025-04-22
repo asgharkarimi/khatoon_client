@@ -6,6 +6,8 @@ import '../models/shipping_company.dart';
 import '../widgets/app_buttons.dart';
 
 class ShippingCompanyForm extends StatefulWidget {
+  static const routeName = '/shipping-company-form';
+
   final ShippingCompany? company;
 
   const ShippingCompanyForm({super.key, this.company});

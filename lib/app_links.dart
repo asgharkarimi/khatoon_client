@@ -1,7 +1,9 @@
+// App API endpoints and operations
 class AppLinks {
-  static const String baseUrl = 'http://192.168.197.166/khatooonbar';
+  // Base URL for API
+  static const String baseUrl = 'http://khatoonbar.ir/api';
   
-  // API Endpoints
+  // Core resource endpoints
   static String get cargos => '$baseUrl/cargos.php';
   static String get vehicles => '$baseUrl/vehicles.php';
   static String get drivers => '$baseUrl/drivers.php';
@@ -13,19 +15,22 @@ class AppLinks {
   static String get payments => '$baseUrl/payments.php';
   static String get expenses => '$baseUrl/expenses.php';
   static String get uploadImage => '$baseUrl/upload_image.php';
-
-  // Helper methods
+  
+  // Delete operations
   static String deleteCargoTypeById(int id) => '$cargoTypes?id=$id';
   static String deleteDriverById(int id) => '$drivers?id=$id';
   static String deleteCustomerById(int id) => '$customers?id=$id';
   static String deleteCargoSellingCompanyById(int id) => '$cargoSellingCompanies?id=$id';
   static String deleteShippingCompanyById(int id) => '$shippingCompanies?id=$id';
   static String deleteBankAccountById(int id) => '$bankAccounts?id=$id';
-  static String updateShippingCompanyById(int id) => '$shippingCompanies?id=$id';
   static String deleteVehicleById(int id) => '$vehicles?id=$id';
+  
+  // Update operations
+  static String updateShippingCompanyById(int id) => '$shippingCompanies?id=$id';
   static String updateVehicleById(int id) => '$vehicles?id=$id';
   static String updateCustomerById(int id) => '$customers?id=$id';
   static String updateCargoTypeById(int id) => '$cargoTypes?id=$id';
   static String updateCargoSellingCompanyById(int id) => '$cargoSellingCompanies?id=$id';
   static String updateBankAccountById(int id) => '$bankAccounts?id=$id';
-}
+  static String updateCargoById(int id) => '$cargos?id=$id';
+} 

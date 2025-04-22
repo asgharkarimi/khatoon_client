@@ -10,6 +10,8 @@ import '../app_links.dart';
 import '../widgets/app_buttons.dart';
 
 class DriverForm extends StatefulWidget {
+  static const routeName = '/driver-form';
+  
   const DriverForm({super.key});
 
   @override

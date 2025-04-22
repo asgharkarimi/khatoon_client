@@ -6,14 +6,16 @@ import 'dart:async';
 import '../app_links.dart';
 import '../widgets/app_buttons.dart';
 
-class VehicleAddForm extends StatefulWidget {
-  const VehicleAddForm({super.key});
+class VehicleForm extends StatefulWidget {
+  static const routeName = '/vehicle-form';
+  
+  const VehicleForm({super.key});
 
   @override
-  State<VehicleAddForm> createState() => _VehicleAddFormState();
+  State<VehicleForm> createState() => _VehicleAddFormState();
 }
 
-class _VehicleAddFormState extends State<VehicleAddForm> {
+class _VehicleAddFormState extends State<VehicleForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _smartCardController = TextEditingController();

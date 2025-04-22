@@ -6,14 +6,16 @@ import '../app_links.dart';
 import '../widgets/app_buttons.dart';
 import 'dart:ui' as ui;
 
-class BankAccountAddForm extends StatefulWidget {
-  const BankAccountAddForm({super.key});
+class BankAccountForm extends StatefulWidget {
+  static const routeName = '/bank-account-form';
+  
+  const BankAccountForm({super.key});
 
   @override
-  State<BankAccountAddForm> createState() => _BankAccountAddFormState();
+  State<BankAccountForm> createState() => _BankAccountAddFormState();
 }
 
-class _BankAccountAddFormState extends State<BankAccountAddForm> {
+class _BankAccountAddFormState extends State<BankAccountForm> {
   final _formKey = GlobalKey<FormState>();
   final _bankNameController = TextEditingController();
   final _accountHolderNameController = TextEditingController();

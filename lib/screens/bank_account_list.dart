@@ -107,7 +107,7 @@ class _BankAccountListScreenState extends State<BankAccountListScreen> {
   void _navigateToAddBankAccount() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const BankAccountAddForm()),
+      MaterialPageRoute(builder: (context) => const BankAccountForm()),
     );
     
     // Refresh the list when returning from the add screen

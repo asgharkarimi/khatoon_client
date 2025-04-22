@@ -107,7 +107,7 @@ class _VehicleListScreenState extends State<VehicleListScreen> {
   void _navigateToAddVehicle() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const VehicleAddForm()),
+      MaterialPageRoute(builder: (context) => const VehicleForm()),
     );
     
     // Refresh the list when returning from the add screen

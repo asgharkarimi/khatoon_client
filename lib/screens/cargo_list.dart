@@ -23,6 +23,7 @@ class _CargoListScreenState extends State<CargoListScreen> {
   List<Cargo> _cargos = [];
   bool _isLoading = true;
   String? _error;
+  Map<int, Map<String, dynamic>> _driverSalaryStatus = {}; // Store driver salary payment status
 
   @override
   void initState() {
@@ -79,6 +80,9 @@ class _CargoListScreenState extends State<CargoListScreen> {
             });
           _isLoading = false;
         });
+        
+        // Once cargos are loaded, fetch driver salary status
+        await _fetchDriverSalaryStatus();
       } else {
         setState(() {
           _error = 'خطا در دریافت بارها: ${response.statusCode}';
@@ -331,6 +335,28 @@ class _CargoListScreenState extends State<CargoListScreen> {
                                                   ),
                                                 ],
                                               ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  const Text('وضعیت پرداخت به راننده:', style: TextStyle(color: Colors.black87)),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                                    decoration: BoxDecoration(
+                                                      color: _getDriverPaymentColor(cargo.id ?? 0),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                    ),
+                                                    child: Text(
+                                                      _getDriverPaymentStatus(cargo.id ?? 0),
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ],
                                           ],
                                         ),
@@ -380,6 +406,52 @@ class _CargoListScreenState extends State<CargoListScreen> {
         return Colors.red;
       default:
         return Colors.grey;
+    }
+  }
+
+  // Get driver payment status text based on cargo ID
+  String _getDriverPaymentStatus(int cargoId) {
+    if (_driverSalaryStatus.containsKey(cargoId)) {
+      return _driverSalaryStatus[cargoId]!['paid'] ? 'پرداخت شده' : 'پرداخت نشده';
+    }
+    return 'پرداخت نشده';
+  }
+  
+  // Get color for driver payment status
+  Color _getDriverPaymentColor(int cargoId) {
+    if (_driverSalaryStatus.containsKey(cargoId)) {
+      return _driverSalaryStatus[cargoId]!['paid'] ? Colors.green : Colors.red;
+    }
+    return Colors.red;
+  }
+
+  // Fetch driver salary payment status from API
+  Future<void> _fetchDriverSalaryStatus() async {
+    try {
+      final response = await http.get(Uri.parse('${AppLinks.baseUrl}/api/driver_salary.php'));
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> salaryData = json.decode(response.body);
+        
+        Map<int, Map<String, dynamic>> statusMap = {};
+        for (var data in salaryData) {
+          if (data['cargo_id'] != null) {
+            int cargoId = int.parse(data['cargo_id'].toString());
+            statusMap[cargoId] = {
+              'paid': data['paid'] == 1 || data['paid'] == true,
+              'amount': data['amount'] != null ? double.parse(data['amount'].toString()) : 0.0,
+              'payment_date': data['payment_date'],
+            };
+          }
+        }
+        
+        setState(() {
+          _driverSalaryStatus = statusMap;
+        });
+      }
+    } catch (e) {
+      // Just log the error but don't display it to the user
+      print('Error fetching driver salary status: $e');
     }
   }
 } 
