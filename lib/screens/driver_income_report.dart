@@ -27,6 +27,8 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
   int? _selectedDriverId;
   DateTime? _startDate;
   DateTime? _endDate;
+  Cargo? _selectedCargo;
+  double _amountPayable = 0.0;
 
   @override
   void initState() {
@@ -89,6 +91,17 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
     return cargo.driverIncome ?? 0.0;
   }
 
+  // Calculate amount payable for a selected cargo
+  void _calculateAmountPayable(Cargo cargo) {
+    setState(() {
+      _selectedCargo = cargo;
+      _amountPayable = _getDriverIncome(cargo);
+      
+      // Convert to Toman if needed (since the values in the database are in Rials)
+      _amountPayable = _amountPayable / 10;
+    });
+  }
+
   // Get filtered cargos based on selected driver and date range
   List<Cargo> _getFilteredCargos() {
     return _cargos.where((cargo) {
@@ -97,16 +110,16 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
       }
       if (_startDate != null && cargo.loadingDate != null) {
         try {
-          final loadingDate = DateTime.parse(cargo.loadingDate!);
-          if (loadingDate.isBefore(_startDate!)) return false;
+        final loadingDate = DateTime.parse(cargo.loadingDate!);
+        if (loadingDate.isBefore(_startDate!)) return false;
         } catch (e) {
           // Skip date filtering if parsing fails
         }
       }
       if (_endDate != null && cargo.loadingDate != null) {
         try {
-          final loadingDate = DateTime.parse(cargo.loadingDate!);
-          if (loadingDate.isAfter(_endDate!)) return false;
+        final loadingDate = DateTime.parse(cargo.loadingDate!);
+        if (loadingDate.isAfter(_endDate!)) return false;
         } catch (e) {
           // Skip date filtering if parsing fails
         }
@@ -185,19 +198,19 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                    children: [
                           // Filter Card
-                          Card(
+                      Card(
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Driver selection
+                            children: [
+                              // Driver selection
                                   Text(
                                     'فیلترها',
                                     style: TextStyle(
@@ -207,10 +220,10 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  DropdownButtonFormField<int>(
-                                    value: _selectedDriverId,
+                              DropdownButtonFormField<int>(
+                                value: _selectedDriverId,
                                     decoration: InputDecoration(
-                                      labelText: 'انتخاب راننده',
+                                  labelText: 'انتخاب راننده',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -222,28 +235,28 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                         child: Text('همه رانندگان'),
                                       ),
                                       ..._drivers.map((driver) {
-                                        return DropdownMenuItem<int>(
-                                          value: driver.id,
-                                          child: Text(driver.fullName),
-                                        );
-                                      }).toList(),
+                                  return DropdownMenuItem<int>(
+                                    value: driver.id,
+                                    child: Text(driver.fullName),
+                                  );
+                                }).toList(),
                                     ],
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _selectedDriverId = value;
-                                      });
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedDriverId = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 16),
                                   
-                                  // Date range selection
-                                  Row(
-                                    children: [
-                                      Expanded(
+                              // Date range selection
+                              Row(
+                                children: [
+                                  Expanded(
                                         child: InkWell(
                                           onTap: () async {
                                             Jalali? picked = await showPersianDatePicker(
-                                              context: context,
+                                          context: context,
                                               initialDate: _startDate != null ? Jalali.fromDateTime(_startDate!) : Jalali.now(),
                                               firstDate: Jalali(1380, 1),
                                               lastDate: Jalali.now(),
@@ -272,11 +285,11 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                             );
                                             
                                             if (picked != null) {
-                                              setState(() {
+                                          setState(() {
                                                 _startDate = picked.toDateTime();
-                                              });
-                                            }
-                                          },
+                                          });
+                                        }
+                                      },
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                                             decoration: BoxDecoration(
@@ -291,7 +304,7 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                                   child: Text(
                                                     _startDate != null
                                                         ? 'از: ${_formatJalaliDate(_startDate!)}'
-                                                        : 'از تاریخ',
+                                          : 'از تاریخ',
                                                     style: TextStyle(
                                                       color: _startDate != null ? Colors.black : Colors.grey.shade600,
                                                       fontSize: 13,
@@ -306,11 +319,11 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      Expanded(
+                                  Expanded(
                                         child: InkWell(
                                           onTap: () async {
                                             Jalali? picked = await showPersianDatePicker(
-                                              context: context,
+                                          context: context,
                                               initialDate: _endDate != null ? Jalali.fromDateTime(_endDate!) : Jalali.now(),
                                               firstDate: Jalali(1380, 1),
                                               lastDate: Jalali.now(),
@@ -338,11 +351,11 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                               },
                                             );
                                             if (picked != null) {
-                                              setState(() {
+                                          setState(() {
                                                 _endDate = picked.toDateTime();
-                                              });
-                                            }
-                                          },
+                                          });
+                                        }
+                                      },
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                                             decoration: BoxDecoration(
@@ -357,20 +370,20 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                                   child: Text(
                                                     _endDate != null
                                                         ? 'تا: ${_formatJalaliDate(_endDate!)}'
-                                                        : 'تا تاریخ',
+                                          : 'تا تاریخ',
                                                     style: TextStyle(
                                                       color: _endDate != null ? Colors.black : Colors.grey.shade600,
                                                       fontSize: 13,
                                                     ),
                                                     overflow: TextOverflow.ellipsis,
                                                     maxLines: 1,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ),
+                        ),
+                      ),
                                     ],
                                   ),
                                   
@@ -449,7 +462,7 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                                 color: Colors.white,
                                               ),
                                             ),
-                                            Text(
+                                    Text(
                                               'مجموع درآمد: ${_formatNumber(totalIncome)} تومان',
                                               style: const TextStyle(
                                                 fontSize: 14,
@@ -513,7 +526,7 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                                         fontSize: 16,
                                       ),
                                       textAlign: TextAlign.center,
-                                    ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -532,6 +545,16 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
                       ),
                     ),
                   ),
+        floatingActionButton: _selectedCargo != null ? FloatingActionButton.extended(
+          onPressed: () {
+            // Show dialog to confirm payment
+            _showPaymentConfirmationDialog();
+          },
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.payment),
+          label: const Text('پرداخت به راننده'),
+        ) : null,
       ),
     );
   }
@@ -576,57 +599,89 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'از ${cargo.origin} به ${cargo.destination}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+      child: InkWell(
+        onTap: () {
+          _calculateAmountPayable(cargo);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'از ${cargo.origin} به ${cargo.destination}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      cargo.cargoTypeName ?? 'نامشخص',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _buildCargoInfo(Icons.calendar_today, 'تاریخ حمل: ${_formatDate(cargo.loadingDate)}'),
+                  const SizedBox(width: 16),
+                  _buildCargoInfo(Icons.local_shipping, 'راننده: $driverName'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildCargoInfo(Icons.line_weight, 'وزن: ${cargo.weightTonnes} تن'),
+                  const SizedBox(width: 16),
+                  _buildCargoInfo(Icons.attach_money, 'درآمد راننده: ${_formatNumber(driverIncome)} تومان'),
+                ],
+              ),
+              // Show indicator that this card is selected
+              if (_selectedCargo?.id == cargo.id)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
+                    color: Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade300),
                   ),
-                  child: Text(
-                    cargo.cargoTypeName ?? 'نامشخص',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.primaryColor,
-                    ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'مبلغ قابل پرداخت: ${_formatNumber(_amountPayable)} تومان',
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildCargoInfo(Icons.calendar_today, 'تاریخ حمل: ${_formatDate(cargo.loadingDate)}'),
-                const SizedBox(width: 16),
-                _buildCargoInfo(Icons.local_shipping, 'راننده: $driverName'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildCargoInfo(Icons.line_weight, 'وزن: ${cargo.weightTonnes} تن'),
-                const SizedBox(width: 16),
-                _buildCargoInfo(Icons.attach_money, 'درآمد راننده: ${_formatNumber(driverIncome)} تومان'),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -656,4 +711,57 @@ class _DriverIncomeReportScreenState extends State<DriverIncomeReportScreen> {
       ),
     );
   }
-}
+  
+  // Show confirmation dialog for payment
+  void _showPaymentConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تایید پرداخت'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('آیا از پرداخت مبلغ ${_formatNumber(_amountPayable)} تومان به راننده مطمئن هستید؟'),
+            if (_selectedCargo != null && _selectedCargo!.driverName != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text('راننده: ${_selectedCargo!.driverName}'),
+              ),
+            if (_selectedCargo != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text('مسیر: ${_selectedCargo!.origin} به ${_selectedCargo!.destination}'),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('انصراف'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              // TODO: Implement actual payment process
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('پرداخت با موفقیت انجام شد'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              setState(() {
+                _selectedCargo = null;
+              });
+            },
+            child: const Text('تایید پرداخت'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+} 

@@ -44,6 +44,7 @@ dependencies:
   device_info_plus: ^9.1.1
   persian_datetime_picker: ^3.1.0
   path: ^1.9.0
+  http_parser: ^4.1.2
   
 
 dev_dependencies:

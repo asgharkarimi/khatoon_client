@@ -23,6 +23,7 @@ import 'screens/shipping_company_form.dart';
 import 'screens/cargo_selling_company_form.dart';
 import 'screens/bank_account_form.dart';
 import 'screens/vehicle_form.dart';
+import 'screens/all_screens_buttons.dart';
 import 'common/enums.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
@@ -139,6 +140,7 @@ class MyApp extends StatelessWidget {
         CargoSellingCompanyForm.routeName: (ctx) => const CargoSellingCompanyForm(),
         BankAccountForm.routeName: (ctx) => const BankAccountForm(),
         VehicleForm.routeName: (ctx) => const VehicleForm(),
+        AllScreensButtons.routeName: (ctx) => const AllScreensButtons(),
       },
     );
   }

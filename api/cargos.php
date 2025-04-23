@@ -103,7 +103,9 @@ function handleGet($conn, $table) {
             END
         ELSE NULL
     END as driver_income";
-
+    
+    // Add calculated field for total payment amount (weight * price per tonne)
+    $calculatedFields .= ", (c.weight_tonnes * c.price_per_tonne) as total_payment_amount";
 
     if ($id) {
         // Get single record with details

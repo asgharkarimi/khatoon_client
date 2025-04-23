@@ -14,9 +14,10 @@ class AppLinks {
   static String get bankAccounts => '$baseUrl/bank_accounts.php';
   static String get payments => '$baseUrl/payments.php';
   static String get expenses => '$baseUrl/expenses.php';
-  static String get uploadImage => '$baseUrl/upload_image.php';
+  static String get uploadImage => '$baseUrl/upload.php';
+  static String get driverSalary => '$baseUrl/driver_salary.php';
   
-  // Delete operations
+  // Delete operationsimage.png
   static String deleteCargoTypeById(int id) => '$cargoTypes?id=$id';
   static String deleteDriverById(int id) => '$drivers?id=$id';
   static String deleteCustomerById(int id) => '$customers?id=$id';

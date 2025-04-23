@@ -72,9 +72,21 @@ class CargoDetailsScreen extends StatelessWidget {
               // اطلاعات خودرو و راننده
               _buildSectionTitle(context, 'اطلاعات حمل و نقل'),
               _buildDataCard(context, [
-                _buildDataRow('خودرو:', cargo.vehicleName ?? 'نامشخص'),
-                _buildDataRow('راننده:', cargo.driverName ?? 'نامشخص'),
-                _buildDataRow('شرکت حمل و نقل:', cargo.shippingCompanyName ?? 'نامشخص'),
+                _buildDataRow(
+                  context,
+                  'خودرو:',
+                  cargo.vehicleName ?? 'نامشخص',
+                ),
+                _buildDataRow(
+                  context,
+                  'راننده:',
+                  cargo.driverName ?? 'نامشخص',
+                ),
+                _buildDataRow(
+                  context,
+                  'شرکت حمل و نقل:',
+                  cargo.shippingCompanyName ?? 'نامشخص',
+                ),
               ]),
               
               const SizedBox(height: 16),
@@ -82,9 +94,21 @@ class CargoDetailsScreen extends StatelessWidget {
               // اطلاعات بار
               _buildSectionTitle(context, 'اطلاعات بار'),
               _buildDataCard(context, [
-                _buildDataRow('نوع بار:', cargo.cargoTypeName ?? 'نامشخص'),
-                _buildDataRow('شرکت فروشنده:', cargo.sellingCompanyName ?? 'نامشخص'),
-                _buildDataRow('وزن (تن):', weightFormatted),
+                _buildDataRow(
+                  context,
+                  'نوع بار:',
+                  cargo.cargoTypeName ?? 'نامشخص',
+                ),
+                _buildDataRow(
+                  context,
+                  'شرکت فروشنده:',
+                  cargo.sellingCompanyName ?? 'نامشخص',
+                ),
+                _buildDataRow(
+                  context,
+                  'وزن (تن):',
+                  weightFormatted,
+                ),
               ]),
               
               const SizedBox(height: 16),
@@ -92,8 +116,28 @@ class CargoDetailsScreen extends StatelessWidget {
               // اطلاعات تاریخ
               _buildSectionTitle(context, 'تاریخ حمل'),
               _buildDataCard(context, [
-                _buildDataRow('تاریخ بارگیری:', loadingDateFormatted),
-                _buildDataRow('تاریخ تخلیه:', unloadingDateFormatted),
+                _buildDataRow(
+                  context,
+                  'مبدأ:',
+                  cargo.origin,
+                ),
+                _buildDataRow(
+                  context,
+                  'مقصد:',
+                  cargo.destination,
+                ),
+                if (cargo.loadingDate != null)
+                  _buildDataRow(
+                    context,
+                    'تاریخ بارگیری:',
+                    _formatDate(cargo.loadingDate!),
+                  ),
+                if (cargo.unloadingDate != null)
+                  _buildDataRow(
+                    context,
+                    'تاریخ تخلیه:',
+                    _formatDate(cargo.unloadingDate!),
+                  ),
               ]),
               
               const SizedBox(height: 16),
@@ -101,16 +145,67 @@ class CargoDetailsScreen extends StatelessWidget {
               // اطلاعات مالی
               _buildSectionTitle(context, 'اطلاعات مالی'),
               _buildDataCard(context, [
-                _buildDataRow('مشتری:', cargo.customerName ?? 'نامشخص'),
-                _buildDataRow('قیمت هر تن (تومان):', priceFormatted),
-                _buildDataRow('مبلغ کل (تومان):', totalAmountFormatted, isHighlighted: true),
-                _buildDataRow('هزینه حمل هر تن (تومان):', transportCostFormatted),
-                _buildDataRow('هزینه کل حمل (تومان):', totalTransportCostFormatted, isHighlighted: true),
-                _buildDataRow('مبلغ بارنامه (تومان):', waybillAmountFormatted),
-                _buildDataRow('وضعیت پرداخت مشتری:', cargo.customerPaymentStatusName ?? 'نامشخص'),
-                _buildDataRow('پرداخت به فروشنده:', cargo.sellerPaymentStatus ? 'انجام شده' : 'انجام نشده'),
+                _buildDataRow(
+                  context,
+                  'مشتری:',
+                  cargo.customerName ?? 'نامشخص',
+                ),
+                _buildDataRow(
+                  context,
+                  'قیمت هر تن (تومان):',
+                  priceFormatted,
+                ),
+                _buildDataRow(
+                  context,
+                  'مبلغ کل (تومان):',
+                  totalAmountFormatted,
+                  valueColor: Colors.green,
+                ),
+                _buildDataRow(
+                  context,
+                  'هزینه حمل هر تن (تومان):',
+                  transportCostFormatted,
+                ),
+                _buildDataRow(
+                  context,
+                  'هزینه کل حمل (تومان):',
+                  totalTransportCostFormatted,
+                  valueColor: Colors.green,
+                ),
+                _buildDataRow(
+                  context,
+                  'مبلغ بارنامه (تومان):',
+                  waybillAmountFormatted,
+                ),
+                _buildDataRow(
+                  context,
+                  'وضعیت پرداخت مشتری:',
+                  cargo.customerPaymentStatusName ?? 'نامشخص',
+                  valueColor: getPaymentStatusColor(cargo.customerPaymentStatusName),
+                ),
+                _buildDataRow(
+                  context,
+                  'پرداخت به فروشنده:',
+                  cargo.sellerPaymentStatus ? 'انجام شده' : 'انجام نشده',
+                ),
+                _buildDataRow(
+                  context,
+                  'وضعیت پرداخت به راننده:',
+                  _getDriverPaymentStatus(cargo.id),
+                  valueColor: _getDriverPaymentColor(cargo.id),
+                ),
                 if (cargo.customerBankAccountName != null)
-                  _buildDataRow('حساب بانکی مشتری:', cargo.customerBankAccountName!),
+                  _buildDataRow(
+                    context,
+                    'حساب بانکی مشتری:',
+                    cargo.customerBankAccountName!,
+                  ),
+                _buildDataRow(
+                  context,
+                  'مجموع پرداختی:',
+                  _formatNumber(cargo.weightTonnes * cargo.pricePerTonne) + ' AFN',
+                  valueColor: Colors.green,
+                ),
               ]),
               
               // نمایش تصویر بارنامه اگر موجود باشد
@@ -331,7 +426,7 @@ class CargoDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDataRow(String label, String value, {bool isHighlighted = false}) {
+  Widget _buildDataRow(BuildContext context, String title, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -341,7 +436,7 @@ class CargoDetailsScreen extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              label,
+              title,
               style: TextStyle(
                 color: Colors.grey[700],
                 fontWeight: FontWeight.w500,
@@ -359,9 +454,9 @@ class CargoDetailsScreen extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color: isHighlighted ? Colors.blue[800] : Colors.black,
-                fontSize: isHighlighted ? 16.0 : 14.0,
+                fontWeight: FontWeight.normal,
+                color: valueColor ?? Colors.black,
+                fontSize: 14.0,
               ),
               textAlign: TextAlign.left,
             ),
@@ -434,5 +529,82 @@ class CargoDetailsScreen extends StatelessWidget {
   // Helper method to format numbers
   String _formatNumber(double value) {
     return NumberFormat('#,###', 'fa').format(value);
+  }
+
+  String _formatDate(String date) {
+    // Implement your logic to format the date
+    // For example, you can use the Jalali class to format the date
+    return Jalali.fromDateTime(DateTime.parse(date)).formatFullDate();
+  }
+
+  Color getPaymentStatusColor(String? paymentStatus) {
+    // Implement your logic to determine the color based on the payment status
+    // For example, you can use a switch statement or a map to return the appropriate color
+    switch (paymentStatus) {
+      case 'Paid':
+        return Colors.green;
+      case 'Unpaid':
+        return Colors.red;
+      case 'Partially Paid':
+        return Colors.orange;
+      default:
+        return Colors.black;
+    }
+  }
+
+  // Method to get driver payment status text based on cargo ID
+  String _getDriverPaymentStatus(int? cargoId) {
+    if (cargoId == null) return 'پرداخت نشده';
+    
+    // Check if we have payment status data
+    try {
+      final Map<String, dynamic> statusData = _fetchDriverSalaryStatus(cargoId);
+      return statusData['paid'] ? 'پرداخت شده' : 'پرداخت نشده';
+    } catch (e) {
+      return 'پرداخت نشده';
+    }
+  }
+  
+  // Get color for driver payment status
+  Color _getDriverPaymentColor(int? cargoId) {
+    if (cargoId == null) return Colors.red;
+    
+    try {
+      final Map<String, dynamic> statusData = _fetchDriverSalaryStatus(cargoId);
+      return statusData['paid'] ? Colors.green : Colors.red;
+    } catch (e) {
+      return Colors.red;
+    }
+  }
+  
+  // Fetch driver salary payment status
+  Map<String, dynamic> _fetchDriverSalaryStatus(int cargoId) {
+    // This implementation would actually fetch data from the API
+    // In a production app, this would be replaced with a call to the API
+    // and should be made async
+    try {
+      // Mock implementation
+      // In a real-world scenario, we would use this:
+      /*
+      final response = await http.get(Uri.parse('${AppLinks.driverSalary}?cargo_id=$cargoId'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          return {
+            'paid': true,
+            'amount': data[0]['amount'] != null ? double.parse(data[0]['amount'].toString()) : 0.0,
+            'payment_date': data[0]['payment_date'],
+          };
+        }
+      }
+      */
+      
+      // For now, return mock data
+      // In a real implementation, we'd also cache this data
+      return {'paid': false, 'amount': 0.0};
+    } catch (e) {
+      print('Error fetching driver salary status: $e');
+      return {'paid': false, 'amount': 0.0};
+    }
   }
 } 
